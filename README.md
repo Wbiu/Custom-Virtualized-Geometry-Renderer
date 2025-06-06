@@ -27,7 +27,16 @@ A custom Virtualized Geometry LOD Rendering Engine : cluster-based real-time mes
 - Anyone inspired by **Nanite** looking to experiment with similar techniques in OpenGL
 ---
 ## 🎥 Demo
+### Cluster + BVH View
 ![dynamic_LOD](https://github.com/user-attachments/assets/1556bb78-c4d1-49c8-9804-0441a5426929)
+
+### Triangle View
+![Bunny_triangle](https://github.com/user-attachments/assets/0fb69ce0-a2eb-4fc8-9090-157ea481639f)
+
+### Cluster View
+![Cluster_Bunny](https://github.com/user-attachments/assets/68529280-5257-4bce-b72b-07ec685d527f)
+
+---
 
 ## 🚧 Project Status
 
