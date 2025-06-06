@@ -21,7 +21,7 @@ A custom Virtualized Geometry LOD Rendering Engine : cluster-based real-time mes
 ---
 ## 🔭 Features to Come
 
-- 🔄 Multi-threaded cluster management
+- 🔄 Multi-threaded
 - 🔄 Vulkan API transition
 - 🔄 Ray tracing support
 
