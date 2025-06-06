@@ -31,7 +31,8 @@ A custom Virtualized Geometry LOD Rendering Engine : cluster-based real-time mes
 ![dynamic_LOD](https://github.com/user-attachments/assets/1556bb78-c4d1-49c8-9804-0441a5426929)
 
 ### Triangle View
-![Bunny_triangle](https://github.com/user-attachments/assets/0fb69ce0-a2eb-4fc8-9090-157ea481639f)
+![Bunny_triangle](https://github.com/user-attachments/assets/71884b92-1fac-4cda-8e2a-037f38774314)
+
 
 ### Cluster View
 ![Cluster_Bunny](https://github.com/user-attachments/assets/68529280-5257-4bce-b72b-07ec685d527f)
