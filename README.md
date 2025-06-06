@@ -28,7 +28,6 @@ A custom Virtualized Geometry LOD Rendering Engine : cluster-based real-time mes
 ---
 ## 🎥 Demo
 ![dynamic_LOD](https://github.com/user-attachments/assets/1556bb78-c4d1-49c8-9804-0441a5426929)
-if)
 
 ## 🚧 Project Status
 
