@@ -8,7 +8,7 @@ A custom Virtualized Geometry LOD Rendering Engine : cluster-based real-time mes
 - 🧩 **Cluster-Based Mesh Partitioning** for efficient culling and updates  
 - 🚀 **View-Dependent Streaming** with bounding volume-based LOD switching  
 - 🎯 **Real-Time Simplification** based on camera distance  
-
+### Feate
 ---
 ## 🔧 Technical Highlights
 
@@ -18,6 +18,12 @@ A custom Virtualized Geometry LOD Rendering Engine : cluster-based real-time mes
 - ✂️ QEM (Quadric Error Metrics) used for geometry simplification
 - 🎯 Per-cluster frustum culling for efficient rendering
 - 📥 Dynamically loads and unloads cluster geometry based on frustum intersection
+---
+## 🔭 Features to Come
+
+- 🔄 Multi-threaded cluster management
+- 🔄 Vulkan API transition
+- 🔄 Ray tracing support
 
 ---
 ## 🎮 Ideal For
@@ -33,7 +39,6 @@ A custom Virtualized Geometry LOD Rendering Engine : cluster-based real-time mes
 ### Triangle View
 ![Bunny_triangle](https://github.com/user-attachments/assets/71884b92-1fac-4cda-8e2a-037f38774314)
 
-
 ### Cluster View
 ![Cluster_Bunny](https://github.com/user-attachments/assets/68529280-5257-4bce-b72b-07ec685d527f)
 
@@ -41,8 +46,8 @@ A custom Virtualized Geometry LOD Rendering Engine : cluster-based real-time mes
 
 ## 🚧 Project Status
 
-- 🔄 Currently in **active development**
-- 🧪 Preparing for a potential **public release version**
-- 📦 **Release coming soon** – stay tuned!
+- 🔄 Currently in **active development** 
+- 📍 Currently working **Code Optimization** and **Vulkan API** transistion
+- 🧪 Preparing for a potential **public release version** 
 
 
