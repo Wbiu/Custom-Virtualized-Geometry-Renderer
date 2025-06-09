@@ -8,12 +8,12 @@ A custom Virtualized Geometry LOD Rendering Engine : cluster-based real-time mes
 - 🧩 **Cluster-Based Mesh Partitioning** for efficient culling and updates  
 - 🚀 **View-Dependent Streaming** with bounding volume-based LOD switching  
 - 🎯 **Real-Time Simplification** based on camera distance  
-### Feate
 ---
 ## 🔧 Technical Highlights
 
 - 🛠️ Developed entirely from the ground up
 - 📦 Minimal external dependencies: only [GLFW](https://www.glfw.org/), [GLM](https://github.com/g-truc/glm), and [Dear ImGui](https://github.com/ocornut/imgui)
+- ⏭️ Uses **SIMD** (SSE/AVX) acceleration for Vector-Math
 - 🌲 BVH (Bounding Volume Hierarchy) used for cluster-based spatial organization
 - ✂️ QEM (Quadric Error Metrics) used for geometry simplification
 - 🎯 Per-cluster frustum culling for efficient rendering
