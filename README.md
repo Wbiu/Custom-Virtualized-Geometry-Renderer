@@ -1,53 +1,54 @@
-# Custom-Virtualized-Geometry-Renderer
+# Custom-Virtualized-Geometry-Renderer 💻
 A custom Virtualized Geometry LOD Rendering Engine : cluster-based real-time mesh simplification and LOD streaming system inspired by UE5's Nanite. This engine dynamically switches between multiple Levels of Detail using a virtualized geometry hierarchy, supporting view-dependent streaming and cluster-based simplification.
 
-
 ## ✨ Features
-
-- 🔄 **Dynamic LOD Transitions** with hysteresis to prevent flickering  
-- 🧩 **Cluster-Based Mesh Partitioning** for efficient culling and updates  
-- 🚀 **View-Dependent Streaming** with bounding volume-based LOD switching  
-- 🎯 **Real-Time Simplification** based on camera distance  
+- ♻️ **Dynamic LOD transitions** via a **graph** to reduce cluster overdraw  
+- 🧩 **Cluster-based mesh partitioning** for efficient culling and updates  
+- 🚀 **View-dependent streaming** with bounding volume–based LOD switching  
+- 🍭 **Debug views:** render **clusters** or **triangles (primitives)**
 ---
 ## 🔧 Technical Highlights
-
-- 🛠️ Developed entirely from the ground up
-- 📦 Minimal external dependencies: only [GLFW](https://www.glfw.org/) and [Dear ImGui](https://github.com/ocornut/imgui)
-- ⏭️ Uses a custom **SIMD** (SSE/AVX) math library for Vector-Math acceleration
-- 🌲 BVH (Bounding Volume Hierarchy) used for cluster-based spatial organization
-- ✂️ QEM (Quadric Error Metrics) used for geometry simplification
-- 🎯 Per-cluster frustum culling for efficient rendering
-- 📥 Dynamically loads and unloads cluster geometry based on frustum intersection
----
-## 🔭 Features to Come
-
-- 🔄 Multi-threaded
-- 🔄 Vulkan API transition
-- 🔄 Ray tracing support
-
+- 🛠️ Built from the ground up
+- 📦 Minimal external dependencies: [GLFW](https://www.glfw.org/) and [Dear ImGui](https://github.com/ocornut/imgui)
+- ⏭️ Custom SIMD (SSE/AVX/FMA) math for vector ops
+- 🌲 **BVH** (Bounding Volume Hierarchy) for cluster spatial organization
+- ✂️ **QEM** (Quadric Error Metrics) for geometry simplification
+- 🎯 Per-cluster frustum culling
+- 📥 View-frustum based streaming of cluster geometry
+- 🧵 **Multi-threaded** mesh processing; rendering on its own thread
+- 🌋 **Vulkan RHI** backend
+- ⚡️ Ready to support **ray tracing** via BVH
 ---
 ## 🎮 Ideal For
-
 - Researchers exploring real-time mesh simplification  
-- Developers building custom rendering engines  
-- Anyone inspired by **Nanite** looking to experiment with similar techniques in OpenGL
+- Engine developers experimenting with virtualized geometry  
+- Anyone inspired by **Nanite** and interested in similar techniques (here using **Vulkan**)
 ---
 ## 🎥 Demo
-### Cluster + BVH View
-![dynamic_LOD](https://github.com/user-attachments/assets/1556bb78-c4d1-49c8-9804-0441a5426929)
-
+A packaged demo app is available under **Releases**. Example meshes are included.  
+**Note:** not every mesh will work—see the project note below for details.
 ### Triangle View
-![Bunny_triangle](https://github.com/user-attachments/assets/71884b92-1fac-4cda-8e2a-037f38774314)
+![primitive_view](https://github.com/user-attachments/assets/a9ed94d2-7118-47bd-86d3-0f5ba690bb0b)
 
 ### Cluster View
-![Cluster_Bunny](https://github.com/user-attachments/assets/68529280-5257-4bce-b72b-07ec685d527f)
+![cluster_view](https://github.com/user-attachments/assets/84c4f374-0396-4df2-bed2-5ee1261dde27)
 
 ---
+## ⚠️🚧⚠️ Important Note to Project
+This project was developed as part of my degree and is **not** intended to be a production-ready, bulletproof architecture.  
+Turning it into one would require re-architecting core data structures (current ones use more memory than ideal) and improving robustness for a wider range of mesh topologies. Some meshes—especially non-manifold or highly irregular ones—may fail to process or render correctly.
 
-## 🚧 Project Status
+## ✅ Requirements
+**OS**
+- Windows 10 or 11, 64-bit
+**GPU & Drivers**
+- A Vulkan-capable discrete or integrated GPU
+- Vulkan **1.4** driver recommended (no SDK required to run)
 
-- 🔄 Currently in **active development** 
-- 📍 Currently working **Code Optimization** and **Vulkan API** transistion
-- 🧪 Preparing for a potential **public release version** 
+**CPU**
+- x86_64 CPU
+- **AVX2 + FMA recommended** (this build uses SIMD paths for speed)
+- SSE2-only CPUs may work with a non-SIMD build (slower). If you need that, build with SIMD disabled.
+
 
 
