@@ -37,8 +37,11 @@ A packaged demo app is available under **Releases**. Example meshes are included
 
 ---
 ## ⚠️🚧⚠️ Important Note to Project
-This project was developed as part of my degree and is **not** intended to be a production-ready, bulletproof architecture.  
-Turning it into one would require re-architecting core data structures (current ones use more memory than ideal) and improving robustness for a wider range of mesh topologies. Some meshes—especially non-manifold or highly irregular ones—may fail to process or render correctly.
+This project was developed as part of my degree and is **experimental**. It is **not** a production-ready, bullet-proof engine.
+- Core data structures trade memory for simplicity and will need re-architecture for real-world scale and stability.
+- Some meshes—especially **non-manifold** or highly irregular topology—may fail to process or render correctly.
+- APIs, file formats, and behavior may change without notice.
+**Provided “as is”, without warranty of any kind.** Use at your own risk.
 
 ## ✅ Requirements
 **OS**
