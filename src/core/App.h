@@ -1,3 +1,15 @@
+// SPDX-License-Identifier: MIT
+/*
+===============================================================================
+ Custom-Virtualized-Geometry-Renderer — App.cpp
+-------------------------------------------------------------------------------
+ Academic/experimental prototype inspired by UE5 Nanite.
+ Not production-ready. Provided “AS IS”, without warranties or conditions.
+ See README.md for context and LICENSE for terms.
+ Source: https://github.com/Wbiu/Custom-Virtualized-Geometry-Renderer
+===============================================================================
+*/
+
 #pragma once
 #include <chrono>
 #include <thread>
