@@ -41,6 +41,7 @@ Turning it into one would require re-architecting core data structures (current 
 ## ✅ Requirements
 **OS**
 - Windows 10 or 11, 64-bit
+ 
 **GPU & Drivers**
 - A Vulkan-capable discrete or integrated GPU
 - Vulkan **1.4** driver recommended (no SDK required to run)
