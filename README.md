@@ -27,6 +27,8 @@ A custom Virtualized Geometry LOD Rendering Engine : cluster-based real-time mes
 ## 🎥 Demo
 A packaged demo app is available under **Releases**. Example meshes are included.  
 **Note:** not every mesh will work—see the project note below for details.
+❗️🛡️ On some system **Windows Defender**  will be alerted. So to run click on **More Info** -> **Run anyway**.
+
 ### Triangle View
 ![primitive_view](https://github.com/user-attachments/assets/a9ed94d2-7118-47bd-86d3-0f5ba690bb0b)
 
