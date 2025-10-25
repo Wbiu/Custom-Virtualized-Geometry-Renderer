@@ -25,10 +25,11 @@ A custom Virtualized Geometry LOD Rendering Engine : cluster-based real-time mes
 - Anyone inspired by **Nanite** and interested in similar techniques (here using **Vulkan**)
 ---
 ## 🎥 Demo
-A packaged demo app is available under **Releases**. Example meshes are included.  
-**Note:** not every mesh will work—see the project note below for details.
-❗️🛡️ On some system **Windows Defender**  will be alerted. So to run click on **More Info** -> **Run anyway**.
+A packaged demo app is available under **Releases**. Example meshes are included.<br>  
+**Note:** not every mesh will work—see the project note below for details.<br>
+❗️🛡️ On some system **Windows Defender**  will be alerted. So to run click on **More Info** -> **Run anyway**.<br>
 **Video** to [this](https://youtu.be/D8U2XRY2Bt8) : https://youtu.be/D8U2XRY2Bt8
+
 ### Triangle View
 ![primitive_view](https://github.com/user-attachments/assets/a9ed94d2-7118-47bd-86d3-0f5ba690bb0b)
 
