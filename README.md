@@ -16,7 +16,7 @@ A custom Virtualized Geometry LOD Rendering Engine : cluster-based real-time mes
 - 🎯 Per-cluster frustum culling
 - 📥 View-frustum based streaming of cluster geometry
 - 🧵 **Multi-threaded** mesh processing; rendering on its own thread
-- 🌋 **Vulkan RHI** backend
+- 🌋 **Vulkan RHI** backend with dynamic rendering and indirect drawing
 - ⚡️ Ready to support **ray tracing** via BVH
 ---
 ## 🎮 Ideal For
@@ -28,7 +28,7 @@ A custom Virtualized Geometry LOD Rendering Engine : cluster-based real-time mes
 A packaged demo app is available under **Releases**. Example meshes are included.  
 **Note:** not every mesh will work—see the project note below for details.
 ❗️🛡️ On some system **Windows Defender**  will be alerted. So to run click on **More Info** -> **Run anyway**.
-
+**Video** to [this](https://youtu.be/D8U2XRY2Bt8) : https://youtu.be/D8U2XRY2Bt8
 ### Triangle View
 ![primitive_view](https://github.com/user-attachments/assets/a9ed94d2-7118-47bd-86d3-0f5ba690bb0b)
 
