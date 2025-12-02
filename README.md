@@ -6,6 +6,7 @@ A custom Virtualized Geometry LOD Rendering Engine : cluster-based real-time mes
 - 🧩 **Cluster-based mesh partitioning** for efficient culling and updates  
 - 🚀 **View-dependent streaming** with bounding volume–based LOD switching  
 - 🍭 **Debug views:** render **clusters** or **triangles (primitives)**
+- ⚡️ **Ray Traced** light, shadows, ambient occlusion
 ---
 ## 🔧 Technical Highlights
 - 🛠️ Built from the ground up
@@ -17,7 +18,7 @@ A custom Virtualized Geometry LOD Rendering Engine : cluster-based real-time mes
 - 📥 View-frustum based streaming of cluster geometry
 - 🧵 **Multi-threaded** mesh processing; rendering on its own thread
 - 🌋 **Vulkan RHI** backend with dynamic rendering and indirect drawing
-- ⚡️ Ready to support **ray tracing** via BVH
+
 ---
 ## 🎮 Ideal For
 - Researchers exploring real-time mesh simplification  
@@ -35,6 +36,9 @@ A packaged demo app is available under **Releases**. Example meshes are included
 
 ### Cluster View
 ![cluster_view](https://github.com/user-attachments/assets/84c4f374-0396-4df2-bed2-5ee1261dde27)
+
+## Ray Tracing 
+![RT](https://github.com/user-attachments/assets/86614106-443e-4036-9c90-bf44b65dcc72)
 
 ---
 ## ⚠️🚧⚠️ Important Note to Project
