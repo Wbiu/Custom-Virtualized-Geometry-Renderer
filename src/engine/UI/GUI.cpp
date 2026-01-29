@@ -36,7 +36,7 @@ void GUI::init()
     {
         _comboxItem_Model.push_back(std::filesystem::path(entry).string());
     }
-    ImGui::SetNextWindowSize({ 300,250 }, ImGuiCond_Once);
+    ImGui::SetNextWindowSize({ 500,400 }, ImGuiCond_Once);
 
 }
 
@@ -70,7 +70,7 @@ void GUI::beginFrame()
 void GUI::frameContent()
 {
 
-    ImGui::Begin("Data", &_windowOpen,ImGuiWindowFlags_NoResize);
+    ImGui::Begin("Data", &_windowOpen,ImGuiWindowFlags_AlwaysAutoResize);
     ImGui::Text(_text);
 
     if (_loadButtonVisibility)
@@ -104,6 +104,7 @@ void GUI::frameContent()
 	}
 
     static std::string currentItem_RenderMode = _comboxItem_RenderMode[0];
+
     ImGui::Text("Select Render View Mode:\n");
     if (ImGui::BeginCombo("###combo", currentItem_RenderMode.c_str()))
     {
@@ -122,9 +123,63 @@ void GUI::frameContent()
                 _selectedItem_RenderMode = currentItem_RenderMode;
                 ImGui::SetItemDefaultFocus();
             }
+
+
+
         }
         ImGui::EndCombo();
     }
+
+    ImGui::Text("RT Ray Settings:\n");
+    // shadows
+    sprintf_s(_rtShadowSampleStrBuff,
+        "Shadow Ray Sample Count: %i \n",
+        rtShadowRaySampleCnt);
+    ImGui::Text(_rtShadowSampleStrBuff);
+    ImGui::SameLine();
+    if (ImGui::Button("<##SRS") && rtShadowRaySampleCnt > 0)
+        rtShadowRaySampleCnt -= 1;
+    ImGui::SameLine();
+    if (ImGui::Button(">##SRS"))
+        rtShadowRaySampleCnt += 1;
+
+    sprintf_s(_rtShadowAngleStrBuff,
+        "Shadow Cone Angle : %.1f Deg\n",
+        rtShadowConeAngleDeg);
+    ImGui::Text(_rtShadowAngleStrBuff);
+    ImGui::SameLine();
+    if (ImGui::Button("<##SRA") && rtShadowConeAngleDeg > 0)
+        rtShadowConeAngleDeg -= 0.5f;
+    ImGui::SameLine();
+    if (ImGui::Button(">##SRA"))
+        rtShadowConeAngleDeg += 0.5f;
+
+    // Ambient 
+
+    sprintf_s(_rtAmbientSampleStrBuff,
+        "Ambient Ray Sample Count : %i \n",
+        rtAmbientRaySampleCnt);
+    ImGui::Text(_rtAmbientSampleStrBuff);
+    ImGui::SameLine();
+    if (ImGui::Button("<##ARS") && rtAmbientRaySampleCnt > 0)
+        rtAmbientRaySampleCnt -= 1;
+    ImGui::SameLine();
+    if (ImGui::Button(">##ARS"))
+        rtAmbientRaySampleCnt += 1;
+
+    sprintf_s(_rtAmbientAnlgleStrBuff,
+        "Ambient Max Distance : %.1f \n",
+        rtAmbientMaxDistance);
+    ImGui::Text(_rtAmbientAnlgleStrBuff);
+    ImGui::SameLine();
+    if (ImGui::Button("<##ARR") && rtAmbientMaxDistance > 0)
+        rtAmbientMaxDistance -= 0.5f;
+    ImGui::SameLine();
+    if (ImGui::Button(">##ARR"))
+        rtAmbientMaxDistance += 0.5f;
+
+
+
     ImGui::Text("\nControlls : W | A | S | D \n CTRL | SPACE_BAR | ESC \n");
     ImGui::End();
 }

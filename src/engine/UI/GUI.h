@@ -30,12 +30,18 @@ private:
 
 	GLFWwindow* _glfwWindow;
 	std::vector<std::string> _comboxItem_Model;
-	std::vector<std::string> _comboxItem_RenderMode = {"Cluster","Primitive"};
+	std::vector<std::string> _comboxItem_RenderMode = {"Ray Tracning","Normals","Cluster","Primitive"};
 
 	std::string _selectedItem_Model = "";
 	std::string _selectedItem_RenderMode = "";
 	uint32_t _selectedRenderMode_Idx = 0;
 	std::filesystem::path findShaderPath(const char* path);
+
+	char _rtShadowSampleStrBuff[256];
+	char _rtShadowAngleStrBuff[256];
+
+	char _rtAmbientSampleStrBuff[256];
+	char _rtAmbientAnlgleStrBuff[256];
 
 	// end vars
 
@@ -50,6 +56,11 @@ public:
 	GUI();
 	~GUI();
 
+	uint32_t rtShadowRaySampleCnt = 1;
+	float rtShadowConeAngleDeg = 0.5f;
+
+	uint32_t rtAmbientRaySampleCnt = 1;
+	float rtAmbientMaxDistance = 0.5f;
 
 	ImGui_ImplVulkan_InitInfo init_info = {};
 
@@ -69,5 +80,5 @@ public:
 	bool buttonLoad() const;
 	void setLoadStatus(bool isDone);
 	void setLoadButtonVisibility(bool shouldShow);
-	bool getSelectedRenderMode() { return _selectedRenderMode_Idx; };
+	uint32_t getSelectedRenderMode() { return _selectedRenderMode_Idx; };
 };

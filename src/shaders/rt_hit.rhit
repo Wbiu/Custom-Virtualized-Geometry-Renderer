@@ -1,0 +1,288 @@
+
+#version 460
+#extension GL_EXT_ray_tracing : require
+
+struct Vertex {
+    vec4 coords;
+    vec4 color;
+    vec4 normal;
+    uint id;
+    uint pad0;
+    uint pad1;
+    uint pad2;
+};
+
+struct RtInstanceData {
+    uint baseIndex;
+    uint clusterId;
+    uint lodLevel;
+    uint renderMode;
+};
+
+
+struct ShadowPayload {
+    uint visible;
+};
+
+
+layout(set = 0, binding = 1, row_major, std140) uniform CameraUBO {
+    mat4 invViewProj;
+    vec3 camPos;
+} uCam;
+
+
+layout(set = 0, binding = 5, std430) readonly buffer VertexBuffer {
+    Vertex vertices[];
+};
+
+layout(set = 0, binding = 6, std430) readonly buffer IndexBuffer {
+    uint indices[];
+};
+
+layout(set = 0, binding = 7, std430) readonly buffer RtInstanceBuffer {
+    RtInstanceData rtInstances[];
+};
+
+
+layout(set = 0, binding = 8) uniform RtSamplesUBO {
+    uint  aoSampleCnt;
+    float aoMaxDistance;
+    uint  shadowSampleCnt;
+    float shadowConeAngleDeg;
+} uRtSamples;
+
+
+layout(location = 0) rayPayloadInEXT vec3 payload;
+hitAttributeEXT vec2 attribs; // barycentric coords for built-in triangle hits
+
+layout(set = 0, binding = 4) uniform accelerationStructureEXT topLevelAS;
+
+layout(location = 1) rayPayloadEXT ShadowPayload shadowPayload;
+
+const float PI = 3.14159265359;
+
+uint pcg_hash(uint val)
+{
+    uint state = val * 747796405u + 2891336453u;
+    uint word  = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+    return (word >> 22u) ^ word;
+}
+
+float rand(inout uint seed)
+{
+    seed = pcg_hash(seed);
+    return float(seed) * (1.0 / 4294967296.0); // [0,1)
+}
+
+void buildTangentBasis(vec3 n, out vec3 t, out vec3 b)
+{
+    vec3 up = (abs(n.z) < 0.999) ? vec3(0.0, 0.0, 1.0) : vec3(0.0, 1.0, 0.0);
+    t = normalize(cross(up, n));
+    b = cross(n, t);
+}
+
+vec3 sampleDirectionInCone(vec3 lightDir, float maxAngleRad, inout uint seed, int sampleIndex)
+{
+    vec3 T, B;
+    buildTangentBasis(lightDir, T, B);
+
+    float u = (float(sampleIndex) + rand(seed)) / float(uRtSamples.shadowSampleCnt);
+    float v = rand(seed); 
+
+    float cosMax   = cos(maxAngleRad);
+    float cosTheta = mix(1.0, cosMax, u);
+    float sinTheta = sqrt(max(0.0, 1.0 - cosTheta * cosTheta));
+    float phi = 2.0 * PI * v;
+
+    vec3 local = vec3(
+        cos(phi) * sinTheta,
+        sin(phi) * sinTheta,
+        cosTheta
+    );
+
+    return normalize(local.x * T + local.y * B + local.z * lightDir);
+}
+
+
+
+vec3 sampleHemisphereCosine(vec3 normal, inout uint seed, int sampleIndex)
+{
+    vec3 T, B;
+    buildTangentBasis(normal, T, B);
+
+    float u1 = (float(sampleIndex) + rand(seed)) / float(uRtSamples.aoSampleCnt);
+    float u2 = rand(seed);
+
+    float r  = sqrt(u1);
+    float phi = 2.0 * PI * u2;
+
+    float x = r * cos(phi);
+    float y = r * sin(phi);
+    float z = sqrt(max(0.0, 1.0 - u1)); // cosine weighting
+
+    // local (x,y,z) to world
+    return normalize(x * T + y * B + z * normal);
+}
+
+vec3 colorFromId(uint id) {
+    float r = float(((id * 97) % 231) + 24) / 255.0; // Red component
+    float g = float(((id * 57) % 231) + 24)/ 255.0; // Green component
+    float b = float(((id * 33) % 231) + 24) / 255.0; // Blue component
+    return vec3(r, g, b);
+}
+
+void main()
+{
+    // Instance + primitive -> vertices
+    uint inst = gl_InstanceCustomIndexEXT;
+    RtInstanceData instData = rtInstances[inst];
+    uint mode = instData.renderMode;
+
+    // Mode 2: random per cluster
+    if (mode == 2u)
+    {
+        payload = colorFromId(instData.clusterId);
+        return;
+    }
+
+     // Mode 3: random per primitive
+    if (mode == 3u)
+    {
+        uint primId = uint(gl_PrimitiveID);
+        uint id = instData.clusterId * 16777619u ^ primId;   // stable combo hash
+        payload = colorFromId(id);
+        return;
+    }
+
+
+    uint base = instData.baseIndex;
+    uint triIndex = gl_PrimitiveID * 3u;
+
+    uint i0 = indices[base + triIndex + 0u];
+    uint i1 = indices[base + triIndex + 1u];
+    uint i2 = indices[base + triIndex + 2u];
+
+    Vertex v0 = vertices[i0];
+    Vertex v1 = vertices[i1];
+    Vertex v2 = vertices[i2];
+
+    // Barycentric interpolation
+    vec3 bary;
+    bary.yz = attribs;
+    bary.x  = 1.0 - bary.y - bary.z;
+
+    vec3 P = v0.coords.xyz * bary.x +
+             v1.coords.xyz * bary.y +
+             v2.coords.xyz * bary.z;
+
+    vec3 N = normalize(
+        v0.normal.xyz * bary.x +
+        v1.normal.xyz * bary.y +
+        v2.normal.xyz * bary.z
+    );
+
+    // Mode 1: normals view
+    if (mode == 1u)
+    {
+        payload = N * 0.5 + 0.5;
+        return;
+    }
+
+    vec3 albedo = v0.color.xyz * bary.x +
+                  v1.color.xyz * bary.y +
+                  v2.color.xyz * bary.z;
+
+
+    // Direct lighting setup
+    vec3 lightDir = normalize(vec3(0.4, 0.8, 0.2));
+
+    float NdotL  = max(dot(N, lightDir), 0.0);
+    vec3 diffuse = albedo * NdotL;
+
+    vec3 ambientBase = 0.05 * albedo; // base ambient before AO
+
+    vec3 V = normalize(uCam.camPos - P);
+    vec3 H = normalize(lightDir + V);
+    float NdotH = max(dot(N, H), 0.0);
+    float spec  = pow(NdotH, 32.0);
+    vec3 specColor = vec3(0.3) * spec;
+
+    // RNG seeds based on position
+    uint baseSeed = floatBitsToUint(P.x)
+                  ^ (floatBitsToUint(P.y) * 1664525u)
+                  ^ (floatBitsToUint(P.z) * 1013904223u);
+
+    // Soft shadow (multi-sample)
+    vec3 shadowOrigin = P + N * 0.001;
+
+    uint shadowSeed = baseSeed;   // separate seed for shadows
+    float visibility = 0.0;
+
+
+    for (int i = 0; i < uRtSamples.shadowSampleCnt; ++i)
+    {
+        vec3 sampleDir = sampleDirectionInCone(lightDir, radians(uRtSamples.shadowConeAngleDeg),
+                                               shadowSeed, i);
+        shadowPayload.visible = 1u; // assume visible
+
+        traceRayEXT(
+            topLevelAS,
+            gl_RayFlagsOpaqueEXT | gl_RayFlagsTerminateOnFirstHitEXT,
+            0xFF,
+            1,   // sbtRecordOffset -> shadow hit group
+            1,
+            1,   // missIndex -> shadow miss group
+            shadowOrigin,
+            0.001,
+            sampleDir,
+            1e38,
+            1    // ShadowPayload
+        );
+
+        visibility += (shadowPayload.visible != 0u) ? 1.0 : 0.0;
+    }
+
+    visibility /= float(uRtSamples.shadowSampleCnt);
+
+    // Ray-traced ambient occlusion
+    uint aoSeed = baseSeed ^ 0x9e3779b9u;  // decorrelate from shadowSeed
+
+    float occlusion = 0.0;
+
+
+    for (int i = 0; i < uRtSamples.aoSampleCnt; ++i)
+    {
+        vec3 aoDir = sampleHemisphereCosine(N, aoSeed, i);
+
+        // Small offset to avoid self-intersection
+        vec3 aoOrigin = P + N * 0.001;
+
+        shadowPayload.visible = 1u; // reuse same payload: 1 = unoccluded
+
+        traceRayEXT(
+            topLevelAS,
+            gl_RayFlagsOpaqueEXT | gl_RayFlagsTerminateOnFirstHitEXT,
+            0xFF,
+            1,          // reuse shadow hit group (any hit = occluder)
+            1,
+            1,          // reuse shadow miss group
+            aoOrigin,
+            0.001,
+            aoDir,
+            uRtSamples.aoMaxDistance,  // only care about nearby occluders
+            1           // ShadowPayload
+        );
+
+        // If anything hit within AO_RADIUS, count as occlusion
+        occlusion += (shadowPayload.visible == 0u) ? 1.0 : 0.0;
+    }
+
+    occlusion /= float(uRtSamples.aoSampleCnt);
+    float ao = 1.0 - occlusion;  // 1 = fully open, 0 = fully occluded
+
+    vec3 ambient = ao * ambientBase;
+
+    // Final color
+    vec3 direct = diffuse + specColor;
+    payload = ambient + visibility * direct;
+}

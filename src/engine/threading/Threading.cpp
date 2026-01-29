@@ -22,5 +22,5 @@ void Threading::run()
 	_jthread = std::jthread([this,fn = std::move(_toExecute)]()
 		{
 			fn(_modelPath);
-		}); // returns immediately; worker runs in background
+		}); 
 }

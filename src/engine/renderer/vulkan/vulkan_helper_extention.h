@@ -72,7 +72,7 @@ namespace engine::vk
 
 	struct IndirectDrawSet 
 	{
-		VkBuffer     buf = VK_NULL_HANDLE;
+		VkBuffer buf = VK_NULL_HANDLE;
 		VkDeviceMemory mem = VK_NULL_HANDLE;
 		void* mapped = nullptr; // persistently mapped (host visible+coherent)
 		uint32_t     count = 0;
@@ -93,5 +93,54 @@ namespace engine::vk
 		void* mapped;
 		uint32_t     capacity; // max draws this buffer can hold
 	};
+
+	struct RtCameraUBO {
+		engine::math::Mat4f invViewProj;  // inverse(proj * view) for RT
+		engine::math::Vec3f camPos;       // camera position in world space
+		float padding = 0.0f;             // keep std140 alignment happy
+	};
+
+
+	struct RtClusterBlas
+	{
+		VkAccelerationStructureKHR blas = VK_NULL_HANDLE;
+		VkDeviceAddress deviceAddress = 0;
+
+		VkBuffer blasBuffer = VK_NULL_HANDLE;
+		VkDeviceMemory blasMemory = VK_NULL_HANDLE;
+
+		uint32_t firstIndex = 0;   // offset into global index buffer (in indices, not bytes)
+		uint32_t indexCount = 0;   // number of indices for this cluster
+		engineID_t clusterId = 0;   // engine cluster ID, for mapping to your cluster system
+	};
+
+
+	struct RtClusterBuildInfo
+	{
+		uint32_t firstIndex;  // index into global indices[]
+		uint32_t indexCount;  // number of indices for this cluster
+		engineID_t clusterId;   // which engine cluster this corresponds to
+	};
+
+	struct RtInstanceData
+	{
+		uint32_t baseIndex;   // first index into global indices[]
+		uint32_t clusterId;   // optional for debugging / future
+		uint32_t lodLevel;    // optional, for LOD logic later
+		uint32_t renderMode;		  // render view MODE   
+	};
+
+
+	struct RtSamples
+	{
+		//RTAO
+		uint32_t aoSampleCnt = 0;
+		float aoMaxDistance = 0.0f;
+
+		// Shadow
+		uint32_t shadowSampleCnt = 0;
+		float shadowConeAngleDeg = 0.0f;
+	};
+
 
 }

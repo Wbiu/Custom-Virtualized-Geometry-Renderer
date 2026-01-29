@@ -55,6 +55,7 @@ bool LODGenarator::linkCheck(engine::lod::EdgeToCollapseCanidate canidate, engin
 	return false;
 }
 
+
 void LODGenarator::generateLODs(engine::cluster::LODClusterMeshTree& LODClusterMeshTree)
 {
 	engine::cluster::dataClusterPoolTransfer(LODClusterMeshTree, _rootClustermodel);
@@ -732,7 +733,8 @@ engine::lod::EdgeToCollapseCanidate LODGenarator::computeQEM_EdgeCost_V2(std::un
 	return {
 		edge->id,
 		current_error,
-		optimal_v
+		optimal_v,
+		A
 	};
 }
 
@@ -798,10 +800,49 @@ CollapseResult LODGenarator::collapseEdge_v2(engine::lod::EdgeToCollapseCanidate
 		}
 		else
 		{
+			engine::math::Vec3f n0
+			{
+				canidateVextex_1->normal.x,
+				canidateVextex_1->normal.y,
+				canidateVextex_1->normal.z,
+			};
+			
+			engine::math::Vec3f n1
+			{
+				canidateVextex_2->normal.x,
+				canidateVextex_2->normal.y,
+				canidateVextex_2->normal.z,
+			};
+
+			engine::math::Vec3f fallbackNormal = n0 + n1;
+
 			engine::mesh::Vertex* newVertex = new engine::mesh::Vertex();      // the vertex that will survive
 			newVertex->coords = canidate.optimal;
 			newVertex->id = LODClusterMeshTree.nextAvailableVertexID++;
 
+			float len2 = engine::math::length(fallbackNormal);
+
+			if (len2 < 1e-8f) {
+				const auto& incident =
+					LODClusterMeshTree.vertexToPrimMap.at(clusterType).at(canidateVextex_1->id);
+				if (!incident.empty()) {
+					engineID_t anyPid = *incident.begin();
+					auto* tri = LODClusterMeshTree.primitivePool.at(anyPid);
+					auto* vA = LODClusterMeshTree.vertexPool.at(tri->vertices[0]);
+					auto* vB = LODClusterMeshTree.vertexPool.at(tri->vertices[1]);
+					auto* vC = LODClusterMeshTree.vertexPool.at(tri->vertices[2]);
+
+					auto nTri4 = engine::math::unitNormal_xyz(vA->coords, vB->coords, vC->coords);
+					fallbackNormal = { nTri4.x, nTri4.y, nTri4.z };
+				}
+				else {
+					// really degenerate, just pick something
+					fallbackNormal = { 0.0f, 1.0f, 0.0f };
+				}
+			}
+
+			newVertex->normal = { deriveNormalFromQuadric(canidate.A_pair,fallbackNormal) , 1.0f};
+			
 			keepV = newVertex;
 			discardV_1 = canidateVextex_1;
 			discardV_2 = canidateVextex_2;
@@ -1301,4 +1342,71 @@ engine::math::Mat4f LODGenarator::computeQ(engineID_t v_id, engine::cluster::LOD
 
 	return Q_sum;
 
+}
+
+engine::math::Vec3f LODGenarator::deriveNormalFromQuadric(const engine::math::Mat3f A, engine::math::Vec3f fallbackNormal)
+{
+
+	using engine::math::Vec3f;
+
+	Vec3f n0 = fallbackNormal;
+	{
+
+		float len2 = engine::math::length(n0);
+
+		if (len2 < engine::math::EPSILON * engine::math::EPSILON)
+		{
+			n0 = { 0,0,1.0f };
+		}
+		else
+		{
+			float invLen = 1.0f / std::sqrt(len2);
+			n0 = n0 *  invLen;
+		}
+	}
+	// aproximate the eigenvector
+	Vec3f v = n0;
+
+	for ( int i = 0; i < 8 ; ++i)
+	{
+		// Av = A * v
+		Vec3f Av;
+		Av = A * v;
+
+		float len2 = engine::math::length(Av);
+		if (len2 < engine::math::EPSILON * engine::math::EPSILON)
+			break;
+
+		float invLen = 1.0f / std::sqrt(len2);
+		v = v * invLen;
+
+	}
+
+
+	// fall back if tiny
+	{
+		float len2 = engine::math::length(v);
+
+		if (len2 < engine::math::EPSILON * engine::math::EPSILON)
+		{
+			n0 = { 0,0,1.0f };
+		}
+		else
+		{
+			float invLen = 1.0f / std::sqrt(len2);
+			v = v * invLen;
+		}
+	}
+
+	// fliping the direction
+	{
+		float dot = engine::math::dot(v,n0);
+
+		if ( dot < 0.0f)
+		{
+			v = -1 * v;
+		}
+	}
+
+	return v;
 }

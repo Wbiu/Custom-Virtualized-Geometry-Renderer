@@ -252,26 +252,109 @@ void ModelLoader::constructVertices()
 	// because no normalization check is performed here!
 	if (_vertextNormalMap.size() != 0)
 	{
-		for (auto& pair : _vertextNormalMap)
-		{
-			engine::math::Vec4f vecPos = { _vertexPositions[pair.first]};
-			engine::math::Vec4f vecNormals = { _vertexNormals[pair.second]};
-			engine::mesh::Vertex* v = new engine::mesh::Vertex;
-			v->id = vertexID++;
-			v->coords = vecPos;
-			v->normal = vecNormals;
 
-			_modelTmpPtr->vertexPool[v->id] = v;
-			_modelTmpPtr->vertexToPrimMap[engine::cluster::HierarchyLevel::MODEL_LOADING_LEVEL][v->id];
-			
-			_verticies.push_back(v);
-			_modelTmpPtr->vertexIndcicesBufferOrder.emplace_back(v->id);
+		if (isNotNormalized())
+		{
+			_verticies.reserve(_vertexPositions.size());
+			// center of box
+			engine::math::Vec3f center = {
+				((_modelAABB.max.x + _modelAABB.min.x) / 2), //x
+				((_modelAABB.max.y + _modelAABB.min.y) / 2), //y
+				((_modelAABB.max.z + _modelAABB.min.z) / 2)  //z
+			};
+
+			float s_max = std::max({
+				(_modelAABB.max.x - _modelAABB.min.x),	//x
+				(_modelAABB.max.y - _modelAABB.min.y),	//y
+				(_modelAABB.max.z - _modelAABB.min.z) }	//z
+				);
+
+			float scalingFactor = 2 / s_max;
+
+			for (auto& pair : _vertextNormalMap)
+			{
+				engine::math::Vec3f vecPos = { _vertexPositions[pair.first] };
+
+				engine::mesh::Vertex* v = new engine::mesh::Vertex;
+				v->id = vertexID++;
+				v->normal = { _vertexNormals[pair.second] };
+				v->coords = {
+					(vecPos.x - center.x) * scalingFactor,
+					(vecPos.y - center.y) * scalingFactor,
+					(vecPos.z - center.z) * scalingFactor,
+					1.0f};
+
+
+				_verticies.emplace_back(v);
+
+				(void)_modelTmpPtr->vertexPool.emplace(v->id, v);
+
+				auto [outerIt, outerIns] = _modelTmpPtr->vertexToPrimMap.emplace(
+					engine::cluster::HierarchyLevel::MODEL_LOADING_LEVEL,
+					std::pmr::unordered_map<engineID_t, std::pmr::unordered_set<engineID_t>>{ _mr }
+				);
+				auto& innerMap = outerIt->second;
+
+				auto [innerIt, innerIns] = innerMap.emplace(
+					v->id,
+					std::pmr::unordered_set<engineID_t>{ _mr }
+				);
+			}
+
+
+
+
+			/*
+				also scaling down the max dimention box to fit the model
+			*/
+			_modelAABB.max.x = ((_modelAABB.max.x - center.x) * scalingFactor);
+			_modelAABB.max.y = ((_modelAABB.max.y - center.y) * scalingFactor);
+			_modelAABB.max.z = ((_modelAABB.max.z - center.z) * scalingFactor);
+
+			_modelAABB.min.x = ((_modelAABB.min.x - center.x) * scalingFactor);
+			_modelAABB.min.y = ((_modelAABB.min.y - center.y) * scalingFactor);
+			_modelAABB.min.z = ((_modelAABB.min.z - center.z) * scalingFactor);
+
 		}
+		else
+		{
+			_verticies.reserve(_vertexPositions.size());
+
+			for (auto& pair : _vertextNormalMap)
+			{
+				// scaling each vertex positions down / normalized to -1 <--> 1
+				_verticies.reserve(_vertexPositions.size());
+
+				engine::math::Vec4f vecPos = { _vertexPositions[pair.first] };
+				engine::math::Vec4f vecNormals = { _vertexNormals[pair.second] };
+
+				engine::mesh::Vertex* v = new engine::mesh::Vertex;
+				v->id = vertexID++;
+				v->coords = vecPos;
+				v->normal = vecNormals;
+
+				_verticies.emplace_back(v);
+
+				(void)_modelTmpPtr->vertexPool.emplace(v->id, v);
+
+				auto [outerIt, outerIns] = _modelTmpPtr->vertexToPrimMap.emplace(
+					engine::cluster::HierarchyLevel::MODEL_LOADING_LEVEL,
+					std::pmr::unordered_map<engineID_t, std::pmr::unordered_set<engineID_t>>{ _mr }
+				);
+				auto& innerMap = outerIt->second;
+
+				auto [innerIt, innerIns] = innerMap.emplace(
+					v->id,
+					std::pmr::unordered_set<engineID_t>{ _mr }
+				);
+			}
+		}
+
 	}
 	else
 	{	
 		// check if the coords are noramlized
-		if (normalizationCheck())
+		if (isNotNormalized())
 		{
 			// center of box
 			engine::math::Vec3f center = {
@@ -364,7 +447,8 @@ void ModelLoader::constructVertices()
 	_modelTmpPtr->nextAvailableVertexID = vertexID;
 }
 
-bool [[nodiscard]] ModelLoader::normalizationCheck() const
+// normalized to -1 <--> 1
+bool [[nodiscard]] ModelLoader::isNotNormalized() const
 {
 	float dX = _modelAABB.max.x - _modelAABB.min.x;
 	float dY = _modelAABB.max.y - _modelAABB.min.y;

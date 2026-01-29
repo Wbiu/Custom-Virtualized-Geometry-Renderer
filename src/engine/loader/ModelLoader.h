@@ -4,6 +4,7 @@
 #include <vector>
 #include <unordered_set>
 #include <unordered_map>
+#include <map>
 #include "mesh/mesh.h"
 #include <iostream>
 #include <memory_resource>
@@ -27,7 +28,7 @@ private:
 	std::vector<unsigned int> _vertexIndicies;
 	std::unordered_set<unsigned int> _uniqueIndex;
 	std::vector<unsigned int> _normalsIndicies;
-	std::unordered_map<unsigned int, unsigned int> _vertextNormalMap;
+	std::map<unsigned int, unsigned int> _vertextNormalMap;
 	std::unordered_map<engineID_t, engine::mesh::Primitive*> _idToPrimitiveMap;
 	std::vector<engine::mesh::Vertex*> _verticies;
 
@@ -43,7 +44,7 @@ private:
 	void deserializeElementIndexDataLine(std::ifstream& file);
 	void splitString(const char* str, std::vector<std::string>* v, const char* delimiter = " ");
 	void constructVertices();
-	bool [[nodiscard]] normalizationCheck() const ;
+	bool [[nodiscard]] isNotNormalized() const ;
 	void constructPrimitives();
 	void constructModel();
 	void cubifyAABB();

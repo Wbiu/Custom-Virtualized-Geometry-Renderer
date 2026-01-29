@@ -17,6 +17,9 @@ namespace engine::lod
 		engineID_t edge;
 		float error;
 		engine::math::Vec4f optimal;
+
+		// mat A 
+		engine::math::Mat3f A_pair;
 	};
 
 }
@@ -53,7 +56,6 @@ private:
 	const float _kMaxFlipDeg = 60.0f;             // normal flip
 	const float _kCosMaxFlip = std::cos(_kMaxFlipDeg * engine::math::PI / 180.0f);
 
-
 	// end variables
 
 	// function declaration
@@ -75,6 +77,7 @@ private:
 		engine::cluster::HierarchyLevel prevClusterType);
 	engine::math::Mat4f computeQ(engineID_t v_id, engine::cluster::LODClusterMeshTree& LODClusterMeshTree, engine::cluster::HierarchyLevel level);
 	bool linkCheck(engine::lod::EdgeToCollapseCanidate canidate, engine::cluster::LODClusterMeshTree& LODClusterMeshTree, engine::cluster::HierarchyLevel& level);
+	engine::math::Vec3f deriveNormalFromQuadric(const engine::math::Mat3f A, engine::math::Vec3f fallbackNormal);
 	// end function
 public:
 	LODGenarator(engine::cluster::RootClusterModel& rootClustermodel);

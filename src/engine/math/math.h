@@ -28,6 +28,8 @@
 
 namespace engine::math
 {
+	const float EPSILON = 1e-6f;
+
 	// foward declartion of Vec4
 	struct alignas(16) Vec4f;
 

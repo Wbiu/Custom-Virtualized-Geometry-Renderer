@@ -40,8 +40,12 @@ void App::run()
 
 	/*  ui text elements */
 	char buffer[256];
-	int intersectClusters = 0;
+	int intersectClustersCnt = 0;
 	int primitiveDrawCnt = 0;
+
+	int totalRtIndices = 0;
+
+	engine::vk::RtSamples rtSameples{1,1.0f,1,1.0f};
 
 	while (!_vKRenderer->shouldCloseWindow())
 	{
@@ -58,16 +62,29 @@ void App::run()
 		auto planes = _camera->getFrumstPlanes();
 		auto camPos = _camera->getPos();
 
+
+		engine::vk::RtCameraUBO rtcamUBO{};
+		rtcamUBO.invViewProj = engine::math::inverse(vpMat);
+		rtcamUBO.camPos = camPos;
+		rtcamUBO.padding = 0.0f;
+
+		_vKRenderer->submitRtCameraData(rtcamUBO);
+
 		if (_gui->buttonLoad())
 		{
 			_isModelPresent.store(false, std::memory_order_release);
+			_rtUploaded = false; 
+
 			_gui->setLoadButtonVisibility(false);
 			_gui->setLoadStatus(false);
 			_drawList.clear();
 			_vKRenderer->submitDrawList(_drawList, _gui->getSelectedRenderMode());
 
+			//auto loader = meshProcessingHandler();
+			//loader(_gui->getSelectedItem().c_str());
+
 			_thread = new Threading();
-			_thread->load(meshPrecessingHandler(),_gui->getSelectedItem().c_str());
+			_thread->load(meshProcessingHandler(),_gui->getSelectedItem().c_str());
 			_thread->run();
 		}
 
@@ -77,34 +94,71 @@ void App::run()
 			_drawList.clear();
 			_gui->setLoadButtonVisibility(true);
 			
+			if (!_rtUploaded)
+			{
+				_vKRenderer->submitRTRenderData(_linearizedData->vertices, _linearizedData->indices);
+				_vKRenderer->buildClusterBlases(_rtClusterInfos);
+				_rtUploaded = true;
+
+			}
+
+
 			/* frustum culling stage */
 			_clusterManager->setfrustumPlanesAndCamPos(planes, camPos);
 			_clusterManager->cullClusters_V2(modelMat); // this also call the pickLODLevel();
 
+
+			std::vector<engineID_t> visibleClusterIds;
+			visibleClusterIds.reserve(_clusterManager->getClustersToDraw().size());
+
 			// build per-frame draw list from chosen clusters
-			size_t c0 = 0, c1 = 0, c2 = 0;
 			for (engineID_t cid : _clusterManager->getClustersToDraw())
 			{
+
+				visibleClusterIds.push_back(cid);
+
 				primitiveDrawCnt += _clusterManager->getCluster(cid)->primitives.size();
 				const auto& drawableCluster = _linearizedData->clusterDrawRange.at(cid);
 				_drawList.push_back(drawableCluster); // { firstIndex, indexCount, level }
+
+
 			}
 
-			intersectClusters = _clusterManager->getSelectedClusterCnt();
+			intersectClustersCnt = _clusterManager->getvisibleClusterCnt();
 
-			// hand the list to the renderer
-			_vKRenderer->submitDrawList(_drawList, _gui->getSelectedRenderMode());
-			_vKRenderer->submitUniform(&_mvpMat);
+			// Build TLAS & per-instance RtInstanceData only for visible clusters
+			if (!visibleClusterIds.empty())
+			{
+				_vKRenderer->buildClusterTlasVisible(visibleClusterIds, _gui->getSelectedRenderMode());
+			}
+			
+			// comment out : is from old pipe line without RT
+			//_vKRenderer->submitDrawList(_drawList, _gui->getSelectedRenderMode());
+
+			rtSameples.aoSampleCnt = _gui->rtAmbientRaySampleCnt;
+			rtSameples.aoMaxDistance = _gui->rtAmbientMaxDistance;
+
+			rtSameples.shadowSampleCnt = _gui->rtShadowRaySampleCnt;
+			rtSameples.shadowConeAngleDeg = _gui->rtShadowConeAngleDeg;
+
+			_vKRenderer->submitUniform(&_mvpMat,&rtSameples);
 		}
 
+		double gpuFrameMs = _vKRenderer->getGpuFrameTimeMs();
+
 		sprintf_s(buffer,
-			"Intersected clusters : %i\nDraw Primitive %i\nFramerate : %.1f\nCPU Frametime : %.2f ms\n",
-			intersectClusters, primitiveDrawCnt, fps, cpuFrameMs);
+			"Intersected clusters : %i\n"
+			"Draw Primitive %i\n"
+			"Framerate : %.1f\n"
+			"Main Thread Frametime : %.2f ms\n"
+			"GPU Frametime : %.2f ms",
+			intersectClustersCnt, primitiveDrawCnt, fps, cpuFrameMs, gpuFrameMs);
 
 		_gui->setText(buffer);
 		_gui->buildGuiRenderData();
 
-		_vKRenderer->draw(_isModelPresent.load(std::memory_order_acquire));
+		//_vKRenderer->draw(_isModelPresent.load(std::memory_order_acquire));
+		_vKRenderer->draw(_rtUploaded);
 
 		auto workEnd = std::chrono::steady_clock::now();
 		cpuFrameMs = std::chrono::duration<float, std::milli>(workEnd - frameStart).count();
@@ -155,6 +209,7 @@ void App::run()
 		};
 
 		primitiveDrawCnt = 0;
+		totalRtIndices = 0;
 	}
 
 	_vKRenderer->waitIdle();
@@ -221,7 +276,7 @@ void App::cleanup()
 {
 }
 
-std::function<void(const char*)> App::meshPrecessingHandler()
+std::function<void(const char*)> App::meshProcessingHandler()
 {
 	return[&](const char* modelPath)
 		{
@@ -231,9 +286,22 @@ std::function<void(const char*)> App::meshPrecessingHandler()
 			_clusterManager = _meshProcessor->getClusterManager();
 			_linearizedData = _meshProcessor->getLinearizedMeshData();
 
-			_vKRenderer->submitRenderData(_linearizedData->vertices, _linearizedData->indices);
+			//  prepare per-cluster BLAS build info 
+			_rtClusterInfos.clear();
+			_rtClusterInfos.reserve(_linearizedData->clusterDrawRange.size());
 
-			_isModelPresent.store(true,std::memory_order_release);
+			for (const auto& [cid, range] : _linearizedData->clusterDrawRange)
+			{
+				engine::vk::RtClusterBuildInfo info{};
+				info.firstIndex = range.firstIndex;
+				info.indexCount = range.indexCount;
+				info.clusterId = cid;
+
+				_rtClusterInfos.push_back(info);
+			}
+
+
 			_drawList.reserve(_linearizedData->clusterDrawRange.size());
+			_isModelPresent.store(true, std::memory_order_release);
 		};
 }

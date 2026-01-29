@@ -1,4 +1,4 @@
-#include "VulkanRenderer.h"
+﻿#include "VulkanRenderer.h"
 
 
 VulkanRenderer::VulkanRenderer(int windowWidth, int windowHight, const char* applicationName)
@@ -25,6 +25,18 @@ void VulkanRenderer::cleanUp()
 		vkFreeMemory(_vkDevice, _vkUniformBuffersMemory[i], nullptr);
 	}
 
+	for (size_t i = 0; i < _MAX_FRAMES_IN_FLIGHT; ++i) {
+		vkDestroyBuffer(_vkDevice, _vkRtCameraBuffers[i], nullptr);
+		vkFreeMemory(_vkDevice, _vkRtCameraBuffersMemory[i], nullptr);
+	}
+
+
+	for (size_t i = 0; i < _MAX_FRAMES_IN_FLIGHT; ++i) {
+		vkDestroyBuffer(_vkDevice, _vkRtSampleUniform[i], nullptr);
+		vkFreeMemory(_vkDevice, _vkRtUniformBuffersMemory[i], nullptr);
+	}
+
+
 	vkDestroyDescriptorPool(_vkDevice, _vkDescriptorPool, nullptr);
 	vkDestroyDescriptorPool(_vkDevice, _vkDescriptorPoolUI, nullptr);
 	vkDestroyDescriptorSetLayout(_vkDevice, _vkDescriptorSetLayout, nullptr);
@@ -35,20 +47,152 @@ void VulkanRenderer::cleanUp()
 	vkDestroyBuffer(_vkDevice, _vkVertexBuffer, nullptr);
 	vkFreeMemory(_vkDevice, _vkVertexBufferMemory, nullptr);
 
-	for (size_t i = 0; i < _MAX_FRAMES_IN_FLIGHT; i++) {
+	for (size_t i = 0; i < _vkImageAvailableSemaphores.size(); ++i) {
 		vkDestroySemaphore(_vkDevice, _vkImageAvailableSemaphores[i], nullptr);
+	}
+	for (size_t i = 0; i < _vkRenderFinishedSemaphores.size(); ++i) {
+		vkDestroySemaphore(_vkDevice, _vkRenderFinishedSemaphores[i], nullptr);
+	}
+	for (size_t i = 0; i < _vkInFlightFences.size(); ++i) {
 		vkDestroyFence(_vkDevice, _vkInFlightFences[i], nullptr);
 	}
 
-	for (size_t i = 0; i < _vkSwapChainImages.size(); i++) {
-		vkDestroySemaphore(_vkDevice, _vkRenderFinishedSemaphores[i], nullptr);
-	}
 
 	vkDestroyCommandPool(_vkDevice, _vkCommandPool, nullptr);
 
 	vkDestroyPipeline(_vkDevice, _vkGraphicsPipeline, nullptr);
 	vkDestroyPipelineLayout(_vkDevice, _vkPipelineLayout, nullptr);
 	vkDestroyRenderPass(_vkDevice, _vkRenderPass, nullptr);
+
+	vkDestroyPipeline(_vkDevice, _vkRtGraphicsPipeline, nullptr);
+	vkDestroyPipeline(_vkDevice, _vkRtPipeline, nullptr);
+	vkDestroyBuffer(_vkDevice, _vkRtSbtBuffer, nullptr);
+	vkFreeMemory(_vkDevice, _vkRtSbtMemory, nullptr);
+
+	/* removed after the test buffer are not needed */
+	if (_vkTestBlas != VK_NULL_HANDLE) {
+		_vkDestroyAccelerationStructureKHR_PFN(_vkDevice, _vkTestBlas, nullptr);
+		_vkTestBlas = VK_NULL_HANDLE;
+	}
+	if (_vkTestBlasBuffer != VK_NULL_HANDLE) {
+		vkDestroyBuffer(_vkDevice, _vkTestBlasBuffer, nullptr);
+		_vkTestBlasBuffer = VK_NULL_HANDLE;
+	}
+	if (_vkTestBlasMemory != VK_NULL_HANDLE) {
+		vkFreeMemory(_vkDevice, _vkTestBlasMemory, nullptr);
+		_vkTestBlasMemory = VK_NULL_HANDLE;
+	}
+
+	if (_vkTestTlas != VK_NULL_HANDLE) {
+		_vkDestroyAccelerationStructureKHR_PFN(_vkDevice, _vkTestTlas, nullptr);
+		_vkTestTlas = VK_NULL_HANDLE;
+	}
+	if (_vkTestTlasBuffer != VK_NULL_HANDLE) {
+		vkDestroyBuffer(_vkDevice, _vkTestTlasBuffer, nullptr);
+		_vkTestTlasBuffer = VK_NULL_HANDLE;
+	}
+	if (_vkTestTlasMemory != VK_NULL_HANDLE) {
+		vkFreeMemory(_vkDevice, _vkTestTlasMemory, nullptr);
+		_vkTestTlasMemory = VK_NULL_HANDLE;
+	}
+
+
+
+	// RT vertex/index buffers cleanup
+	if (_vkRtVertexBuffer != VK_NULL_HANDLE) {
+		vkDestroyBuffer(_vkDevice, _vkRtVertexBuffer, nullptr);
+		_vkRtVertexBuffer = VK_NULL_HANDLE;
+	}
+	if (_vkRtVertexBufferMemory != VK_NULL_HANDLE) {
+		vkFreeMemory(_vkDevice, _vkRtVertexBufferMemory, nullptr);
+		_vkRtVertexBufferMemory = VK_NULL_HANDLE;
+	}
+
+	if (_vkRtIndexBuffer != VK_NULL_HANDLE) {
+		vkDestroyBuffer(_vkDevice, _vkRtIndexBuffer, nullptr);
+		_vkRtIndexBuffer = VK_NULL_HANDLE;
+	}
+	if (_vkRtIndexBufferMemory != VK_NULL_HANDLE) {
+		vkFreeMemory(_vkDevice, _vkRtIndexBufferMemory, nullptr);
+		_vkRtIndexBufferMemory = VK_NULL_HANDLE;
+	}
+
+	if (_vkMeshBlas != VK_NULL_HANDLE) {
+		_vkDestroyAccelerationStructureKHR_PFN(_vkDevice, _vkMeshBlas, nullptr);
+		_vkMeshBlas = VK_NULL_HANDLE;
+	}
+	if (_vkMeshBlasBuffer != VK_NULL_HANDLE) {
+		vkDestroyBuffer(_vkDevice, _vkMeshBlasBuffer, nullptr);
+		_vkMeshBlasBuffer = VK_NULL_HANDLE;
+	}
+	if (_vkMeshBlasMemory != VK_NULL_HANDLE) {
+		vkFreeMemory(_vkDevice, _vkMeshBlasMemory, nullptr);
+		_vkMeshBlasMemory = VK_NULL_HANDLE;
+	}
+
+
+
+	if (_vkMeshTlas != VK_NULL_HANDLE) {
+		_vkDestroyAccelerationStructureKHR_PFN(_vkDevice, _vkMeshTlas, nullptr);
+		_vkMeshTlas = VK_NULL_HANDLE;
+	}
+	if (_vkMeshTlasBuffer != VK_NULL_HANDLE) {
+		vkDestroyBuffer(_vkDevice, _vkMeshTlasBuffer, nullptr);
+		_vkMeshTlasBuffer = VK_NULL_HANDLE;
+	}
+	if (_vkMeshTlasMemory != VK_NULL_HANDLE) {
+		vkFreeMemory(_vkDevice, _vkMeshTlasMemory, nullptr);
+		_vkMeshTlasMemory = VK_NULL_HANDLE;
+	}
+
+
+	// cluster BLAS cleanup 
+	for (auto& c : _rtClusterBlases)
+	{
+		if (c.blas != VK_NULL_HANDLE)
+		{
+			_vkDestroyAccelerationStructureKHR_PFN(_vkDevice, c.blas, nullptr);
+			c.blas = VK_NULL_HANDLE;
+		}
+		if (c.blasBuffer != VK_NULL_HANDLE)
+		{
+			vkDestroyBuffer(_vkDevice, c.blasBuffer, nullptr);
+			c.blasBuffer = VK_NULL_HANDLE;
+		}
+		if (c.blasMemory != VK_NULL_HANDLE)
+		{
+			vkFreeMemory(_vkDevice, c.blasMemory, nullptr);
+			c.blasMemory = VK_NULL_HANDLE;
+		}
+	}
+	_rtClusterBlases.clear();
+
+
+	if (_vkClusterTlas != VK_NULL_HANDLE)
+	{
+		_vkDestroyAccelerationStructureKHR_PFN(_vkDevice, _vkClusterTlas, nullptr);
+		_vkClusterTlas = VK_NULL_HANDLE;
+	}
+	if (_vkClusterTlasBuffer != VK_NULL_HANDLE)
+	{
+		vkDestroyBuffer(_vkDevice, _vkClusterTlasBuffer, nullptr);
+		_vkClusterTlasBuffer = VK_NULL_HANDLE;
+	}
+	if (_vkClusterTlasMemory != VK_NULL_HANDLE)
+	{
+		vkFreeMemory(_vkDevice, _vkClusterTlasMemory, nullptr);
+		_vkClusterTlasMemory = VK_NULL_HANDLE;
+	}
+
+
+	if (_vkRtInstanceBuffer != VK_NULL_HANDLE) {
+		vkDestroyBuffer(_vkDevice, _vkRtInstanceBuffer, nullptr);
+		_vkRtInstanceBuffer = VK_NULL_HANDLE;
+	}
+	if (_vkRtInstanceBufferMemory != VK_NULL_HANDLE) {
+		vkFreeMemory(_vkDevice, _vkRtInstanceBufferMemory, nullptr);
+		_vkRtInstanceBufferMemory = VK_NULL_HANDLE;
+	}
 
 	if (_enableValidationLayers) 
 	{
@@ -79,6 +223,12 @@ void VulkanRenderer::cleanUp()
 
 	_indirectPerFrame.clear();
 
+	if (_vkGpuTimestampQueryPool != VK_NULL_HANDLE)
+	{
+		vkDestroyQueryPool(_vkDevice, _vkGpuTimestampQueryPool, nullptr);
+		_vkGpuTimestampQueryPool = VK_NULL_HANDLE;
+	}
+
 	vkDestroySurfaceKHR(_vkInstance, _vkSurface, nullptr);
 	vkDestroyDevice(_vkDevice, nullptr);
 	vkDestroyInstance(_vkInstance, nullptr);
@@ -94,6 +244,11 @@ void VulkanRenderer::waitIdle()
 
 void VulkanRenderer::cleanUpSwapChain()
 {
+	// Destroy RT color resources first (order not super critical, but keep it tidy)
+	vkDestroyImageView(_vkDevice, _vkRtColorImageView, nullptr);
+	vkDestroyImage(_vkDevice, _vkRtColorImage, nullptr);
+	vkFreeMemory(_vkDevice, _vkRtColorImageMemory, nullptr);
+
 	vkDestroyImageView(_vkDevice, _vkColorImageView, nullptr);
 	vkDestroyImage(_vkDevice, _vkColorImage, nullptr);
 	vkFreeMemory(_vkDevice, _vkColorImageMemory, nullptr);
@@ -101,6 +256,7 @@ void VulkanRenderer::cleanUpSwapChain()
 	vkDestroyImageView(_vkDevice, _vkDepthImageView, nullptr);
 	vkDestroyImage(_vkDevice, _vkDepthImage, nullptr);
 	vkFreeMemory(_vkDevice, _vkDepthImageMemory, nullptr);
+
 
 	for (size_t i = 0; i < _vkSwapChainFramebuffers.size(); i++) {
 		vkDestroyFramebuffer(_vkDevice, _vkSwapChainFramebuffers[i], nullptr);
@@ -194,13 +350,40 @@ void VulkanRenderer::pollWindowInputEvents()
 
 void VulkanRenderer::drawFrame(bool drawScene)
 {
-
 	vkWaitForFences(_vkDevice, 1, &_vkInFlightFences[_currentFrame], VK_TRUE, UINT64_MAX);
-	vkResetFences(_vkDevice, 1, &_vkInFlightFences[_currentFrame]);
+
+	if (_vkGpuTimestampQueryPool != VK_NULL_HANDLE && _vkTimestampPeriod > 0.0f && _gpuTimestampReady[_currentFrame])
+	{
+		uint32_t queryBase = _currentFrame * 2;
+		uint64_t timestamps[2] = {};
+
+		VkResult qr = vkGetQueryPoolResults(
+			_vkDevice,
+			_vkGpuTimestampQueryPool,
+			queryBase,
+			2,                             
+			sizeof(timestamps),
+			timestamps,
+			sizeof(uint64_t),
+			VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT
+		);
+
+		if (qr == VK_SUCCESS)
+		{
+			uint64_t dtTicks = timestamps[1] - timestamps[0];
+			double dtNs = double(dtTicks) * double(_vkTimestampPeriod);
+			_gpuLastFrameMs = dtNs / 1e6;  // nanoseconds -> milliseconds
+		}
+	}
 
 	uint32_t imageIndex;
-	VkResult vkAcquireNextImageResult = vkAcquireNextImageKHR(_vkDevice, _vkSwapChain, UINT64_MAX,
-		_vkImageAvailableSemaphores[_currentFrame], VK_NULL_HANDLE, &imageIndex);
+	VkResult vkAcquireNextImageResult = vkAcquireNextImageKHR(
+		_vkDevice,
+		_vkSwapChain,
+		UINT64_MAX,
+		_vkImageAvailableSemaphores[_currentFrame],  
+		VK_NULL_HANDLE,
+		&imageIndex);
 
 	if (vkAcquireNextImageResult == VK_ERROR_OUT_OF_DATE_KHR) {
 		recreateSwapChain();
@@ -210,10 +393,19 @@ void VulkanRenderer::drawFrame(bool drawScene)
 		throw std::runtime_error("ERROR::VULKAN::DRAW_CALL::FAILED_TO_ACQUIRE_SWAPCHAIN_IMAGE\n");
 	}
 
+	if (_vkImagesInFlight[imageIndex] != VK_NULL_HANDLE) {
+		vkWaitForFences(_vkDevice, 1, &_vkImagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
+	}
+	_vkImagesInFlight[imageIndex] = _vkInFlightFences[_currentFrame];
+
+	vkResetFences(_vkDevice, 1, &_vkInFlightFences[_currentFrame]);
+
 	vkResetCommandBuffer(_vkCommandBuffers[_currentFrame], 0);
 	recordCommandBuffer(_vkCommandBuffers[_currentFrame], imageIndex, drawScene);
 
-	if(drawScene)
+	_gpuTimestampReady[_currentFrame] = true;
+
+	if (drawScene)
 		updateUniformBuffer(_currentFrame);
 
 	VkSemaphore vkWaitSemaphores[] = { _vkImageAvailableSemaphores[_currentFrame] };
@@ -223,15 +415,37 @@ void VulkanRenderer::drawFrame(bool drawScene)
 	VkSubmitInfo vkSubmitInfo{};
 	vkSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	vkSubmitInfo.waitSemaphoreCount = 1;
+	vkSubmitInfo.pWaitSemaphores = vkWaitSemaphores;
 	vkSubmitInfo.pWaitDstStageMask = vkWaitStages;
 	vkSubmitInfo.commandBufferCount = 1;
 	vkSubmitInfo.pCommandBuffers = &_vkCommandBuffers[_currentFrame];
 	vkSubmitInfo.signalSemaphoreCount = 1;
 	vkSubmitInfo.pSignalSemaphores = vkSignalSemaphores;
-	vkSubmitInfo.pWaitSemaphores = vkWaitSemaphores;
 
-	if (vkQueueSubmit(_vkGraphicsQueue, 1, &vkSubmitInfo, _vkInFlightFences[_currentFrame]) != VK_SUCCESS) {
-		throw std::runtime_error("ERROR::VULKAN::DRAW_CALL::COMMAND_BUFFER::FAILED_TO_SUBMIT_COMMAND_BUFFER\n");
+	VkResult submitRes = vkQueueSubmit(
+		_vkGraphicsQueue,
+		1,
+		&vkSubmitInfo,
+		_vkInFlightFences[_currentFrame]
+	);
+
+	if (submitRes != VK_SUCCESS) {
+		std::cerr << "vkQueueSubmit (drawFrame) failed with VkResult = " << submitRes << std::endl;
+
+		switch (submitRes) {
+		case VK_ERROR_DEVICE_LOST:
+			std::cerr << " -> VK_ERROR_DEVICE_LOST\n";
+			break;
+		case VK_ERROR_OUT_OF_DEVICE_MEMORY:
+			std::cerr << " -> VK_ERROR_OUT_OF_DEVICE_MEMORY\n";
+			break;
+		case VK_ERROR_OUT_OF_HOST_MEMORY:
+			std::cerr << " -> VK_ERROR_OUT_OF_HOST_MEMORY\n";
+			break;
+		default:
+			break;
+		}
+		throw std::runtime_error("ERROR::VULKAN::DRAW_CALL::COMMAND_BUFFER::FAILED_TO_SUBMIT_COMMAND_BUFFER");
 	}
 
 	VkPresentInfoKHR vkPresentInfo{};
@@ -252,7 +466,6 @@ void VulkanRenderer::drawFrame(bool drawScene)
 	else if (vkQueuePresentResult != VK_SUCCESS) {
 		throw std::runtime_error("ERROR::VULKAN::DRAW_CALL::FAILED_TO_PRESENT_SWAPCHAIN_IMAGE\n");
 	}
-
 	_currentFrame = (_currentFrame + 1) % _MAX_FRAMES_IN_FLIGHT;
 }
 
@@ -277,7 +490,11 @@ void VulkanRenderer::recreateSwapChain()
 	createImageViews();
 	createColorResources();
 	createDepthResources();
+	createRtColourResources();
 	createFramebuffers();
+
+	//swapchain image count may have changed
+	_vkImagesInFlight.assign(_vkSwapChainImages.size(), VK_NULL_HANDLE);
 }
 
 void VulkanRenderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex, bool drawScene)
@@ -292,9 +509,26 @@ void VulkanRenderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t
 		throw std::runtime_error("ERROR::VULKAN::COMMANDBUFFER_BEGIN_INFO::FAILED_TO_CREATE_COMMANDBUFFER_BEGIN_INFO\n");
 	}
 
+	if (_vkGpuTimestampQueryPool != VK_NULL_HANDLE)
+	{
+		uint32_t queryBase = _currentFrame * 2; 
+		vkCmdResetQueryPool(
+			commandBuffer,
+			_vkGpuTimestampQueryPool,
+			queryBase,
+			2   
+		);
+
+		vkCmdWriteTimestamp(
+			commandBuffer,
+			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+			_vkGpuTimestampQueryPool,
+			queryBase + 0
+		);
+	}
+
 	const VkImage swapImg = _vkSwapChainImages[imageIndex];
 	VkImageLayout old = _swapchainLayouts[imageIndex];
-
 
 	VkImageMemoryBarrier toColor{};
 	toColor.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -310,7 +544,6 @@ void VulkanRenderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t
 
 	toColor.srcAccessMask = 0;
 	if (old == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
-		// coming from present engine
 		srcStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 		toColor.srcAccessMask = 0;
 	}
@@ -322,105 +555,140 @@ void VulkanRenderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t
 		srcStage, dstStage,
 		0, 0, nullptr, 0, nullptr, 1, &toColor);
 
-	// >>> Layout tracking: now in COLOR_ATTACHMENT_OPTIMAL
 	_swapchainLayouts[imageIndex] = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 
 	if(drawScene)
 	{
-		// =============== Main scene ===============
+		// 1) Trace rays to fill _vkRtColorImage
+		vkCmdBindPipeline(
+			commandBuffer,
+			VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
+			_vkRtPipeline);
 
-		VkClearValue clearColor{ };
-		clearColor.color = { {0.f, 0.f, 0.f, 1.f} };
+		// same descriptor set as graphics: set=0 with rtImage at binding 3
+		vkCmdBindDescriptorSets(
+			commandBuffer,
+			VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
+			_vkPipelineLayout,
+			0,
+			1,
+			&_vkDescriptorSets[_currentFrame],
+			0,
+			nullptr);
 
-		VkClearValue clearDepth{ };
-		clearDepth.depthStencil = { 1.f, 0 };
+		// launch raygen over the whole viewport
+		_vkRtCmdTraceRaysKHR_PFN(
+			commandBuffer,
+			&_vkSbtRaygenRegion,    // raygen SBT
+			&_vkSbtMissRegion,      // miss SBT
+			&_vkSbtHitRegion,       // hit SBT (currently empty)
+			&_vkSbtCallableRegion,  // callable SBT (empty)
+			_vkSwapChainExtent.width,
+			_vkSwapChainExtent.height,
+			1);
 
-		VkRenderingAttachmentInfo colorAtt{};
-		colorAtt.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
-		colorAtt.imageView = _vkColorImageView;                     // MSAA target
+		// 2) Barrier: make rt image writes visible to the fullscreen fragment shader
+		VkImageMemoryBarrier rtBarrier{};
+		rtBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		rtBarrier.image = _vkRtColorImage;
+		rtBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		rtBarrier.subresourceRange.baseMipLevel = 0;
+		rtBarrier.subresourceRange.levelCount = 1;
+		rtBarrier.subresourceRange.baseArrayLayer = 0;
+		rtBarrier.subresourceRange.layerCount = 1;
+		rtBarrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+		rtBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL; // keep as GENERAL
+		rtBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		rtBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		rtBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+		rtBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+		vkCmdPipelineBarrier(
+			commandBuffer,
+			VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR,
+			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+			0,
+			0, nullptr,
+			0, nullptr,
+			1, &rtBarrier);
+
+		// 3) Fullscreen triangle that samples rtImage and writes to swapchain
+		VkRenderingAttachmentInfo colorAtt{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR };
+		colorAtt.imageView = _vkSwapChainImageViews[imageIndex];
 		colorAtt.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		colorAtt.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		colorAtt.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;      // resolve writes to swapchain
-		colorAtt.clearValue = clearColor;
-		colorAtt.resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT;
-		colorAtt.resolveImageView = _vkSwapChainImageViews[imageIndex];
-		colorAtt.resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		colorAtt.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+		VkClearValue clearSwap{};
+		clearSwap.color = { {0.f, 0.f, 0.f, 1.f} };
+		colorAtt.clearValue = clearSwap;
 
-		VkRenderingAttachmentInfo depthAtt{};
-		depthAtt.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
-		depthAtt.imageView = _vkDepthImageView;
-		depthAtt.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-		depthAtt.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		depthAtt.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		depthAtt.clearValue = clearDepth;
-
-		VkRenderingInfo renderingInfo{};
-		renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR;
+		VkRenderingInfo renderingInfo{ VK_STRUCTURE_TYPE_RENDERING_INFO_KHR };
 		renderingInfo.renderArea = { {0,0}, _vkSwapChainExtent };
 		renderingInfo.layerCount = 1;
 		renderingInfo.colorAttachmentCount = 1;
 		renderingInfo.pColorAttachments = &colorAtt;
-		renderingInfo.pDepthAttachment = &depthAtt;
+		renderingInfo.pDepthAttachment = nullptr; // no depth
 
 		vkCmdBeginRendering(commandBuffer, &renderingInfo);
 
-		// --- bind & draw INSIDE the scene rendering block ---
-		VkViewport vkViewport{};
-		vkViewport.x = 0.0f;
-		vkViewport.y = 0.0f;
-		vkViewport.width = static_cast<float>(_vkSwapChainExtent.width);
-		vkViewport.height = static_cast<float>(_vkSwapChainExtent.height);
-		vkViewport.minDepth = 0.0f;
-		vkViewport.maxDepth = 1.0f;
+		// viewport & scissor
+		VkViewport vp{};
+		vp.x = 0.0f;
+		vp.y = 0.0f;
+		vp.width = static_cast<float>(_vkSwapChainExtent.width);
+		vp.height = static_cast<float>(_vkSwapChainExtent.height);
+		vp.minDepth = 0.0f;
+		vp.maxDepth = 1.0f;
+		vkCmdSetViewport(commandBuffer, 0, 1, &vp);
 
-		vkCmdSetViewport(commandBuffer, 0, 1, &vkViewport);
+		VkRect2D sc{};
+		sc.offset = { 0, 0 };
+		sc.extent = _vkSwapChainExtent;
+		vkCmdSetScissor(commandBuffer, 0, 1, &sc);
 
-		VkRect2D vkScissor{};
-		vkScissor.offset = { 0, 0 };
-		vkScissor.extent = _vkSwapChainExtent;
-		vkCmdSetScissor(commandBuffer, 0, 1, &vkScissor);
+		// bind RT fullscreen graphics pipeline
+		vkCmdBindPipeline(
+			commandBuffer,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			_vkRtGraphicsPipeline);
 
-		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _vkGraphicsPipeline);
+		// same descriptor set: fragment shader reads rtImage at binding=3
+		vkCmdBindDescriptorSets(
+			commandBuffer,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			_vkPipelineLayout,
+			0,
+			1,
+			&_vkDescriptorSets[_currentFrame],
+			0,
+			nullptr);
 
-		VkBuffer vkVertexBuffers[] = { _vkVertexBuffer };
-		VkDeviceSize vkOffsets[] = { 0 };
+		// fullscreen triangle (3 vertices, no vertex buffer)
+		vkCmdDraw(commandBuffer, 3, 1, 0, 0);
 
-		/*selecting vertex buffer */
-		vkCmdBindVertexBuffers(commandBuffer, 0, 1, vkVertexBuffers, vkOffsets);
-
-		/*selecting vertex index buffer */
-		vkCmdBindIndexBuffer(commandBuffer, _vkIndexBuffer, 0, VK_INDEX_TYPE_UINT32);
-
-		/*selecting descriptor */
-		vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _vkPipelineLayout
-			, 0, 1, &_vkDescriptorSets[_currentFrame], 0, nullptr);
-
-		// replaced with the indirect draw call
-		const auto& ind = _indirectPerFrame[_currentFrame];
-		if (ind.count > 0) {
-			vkCmdDrawIndexedIndirect(commandBuffer,
-				ind.buf,           // buffer with commands
-				0,                 // offset
-				ind.count,         // drawCount
-				sizeof(VkDrawIndexedIndirectCommand));
-		}
 		vkCmdEndRendering(commandBuffer);
-		// ============= END Frist Pass Model === 
 
-		//  small barrier between passes (read/modify same image)
+		// 4) Barrier between scene and UI (unchanged)
 		VkImageMemoryBarrier between{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
 		between.image = swapImg;
 		between.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
 		between.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		between.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		between.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-		between.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		between.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
+		VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		between.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		between.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
-		vkCmdPipelineBarrier(commandBuffer,
+		vkCmdPipelineBarrier(
+			commandBuffer,
 			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-			0, 0, nullptr, 0, nullptr, 1, &between);
+			0,
+			0, nullptr,
+			0, nullptr,
+			1, &between);
 	}
 
 	// ============= UI Pass ================
@@ -447,7 +715,7 @@ void VulkanRenderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t
 
 	callBackUI(commandBuffer);  // ImGui_ImplVulkan_RenderDrawData(drawData, cmd)
 
-	vkCmdEndRendering(commandBuffer); // <-- END UI PASS
+	vkCmdEndRendering(commandBuffer);
 
 	// ============= END UI Pass ============
 
@@ -474,6 +742,17 @@ void VulkanRenderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t
 	// >>> Layout tracking: back to PRESENT
 	_swapchainLayouts[imageIndex] = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
+	if (_vkGpuTimestampQueryPool != VK_NULL_HANDLE)
+	{
+		uint32_t queryBase = _currentFrame * 2;
+		vkCmdWriteTimestamp(
+			commandBuffer,
+			VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+			_vkGpuTimestampQueryPool,
+			queryBase + 1
+		);
+	}
+
 	if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
 		throw std::runtime_error("ERROR::VULKAN::RECORD_COMMAND::FAILED_TO_RECORD_COMMAND_BUFFER");
 	}
@@ -482,6 +761,17 @@ void VulkanRenderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t
 void VulkanRenderer::updateUniformBuffer(uint32_t currentImage)
 {
 	memcpy(_vkUniformBuffersMapped[currentImage], _mat4Uniform, sizeof(*_mat4Uniform));
+
+	/* RT Camera */
+	memcpy(_vkRtCameraBuffersMapped[currentImage],
+		&_rtCameraHost,
+		sizeof(engine::vk::RtCameraUBO));
+
+	/* RT Ray Samples */
+	memcpy(_vkRtUniformBuffersMapped[currentImage],
+		_rtSamples,
+		sizeof(engine::vk::RtSamples));
+
 }
 
 void VulkanRenderer::updateSSBO(uint32_t currentImage)
@@ -490,9 +780,10 @@ void VulkanRenderer::updateSSBO(uint32_t currentImage)
 		_frameDrawItems.size() * sizeof(engine::vk::DrawItem));
 }
 
-void VulkanRenderer::submitUniform(engine::math::Mat4f* mat4)
+void VulkanRenderer::submitUniform(engine::math::Mat4f* mat4, engine::vk::RtSamples* rtSamples )
 {
 	_mat4Uniform = mat4;
+	_rtSamples = rtSamples;
 }
 
 void VulkanRenderer::initVk()
@@ -510,15 +801,24 @@ void VulkanRenderer::initVk()
 	createDescriptorSetLayout();
 	createGraphicsPipeline();
 
+	createRtGraphicsPipeline(); // RT
+	createRayTracingPipeline(); // RT
+	createRayTracingSBT(); // RT
+
+
 	createCommandPool();
 	createColorResources(); 
 	createDepthResources();
+
+	createRtColourResources(); // RT
 
 	createIndirectBuffers(); 
 
 	createUniformBuffers();
 
-	createSSBO(); // new 
+	createRtCameraBuffers(); // RT cam buffer
+
+	createSSBO();
 
 	createDescriptorPool();
 	createUIDescriptorPool();
@@ -527,6 +827,21 @@ void VulkanRenderer::initVk()
 
 	createCommandBuffers();
 	createSyncObjects();
+
+	createGpuTimestampQueryPool();
+}
+
+void VulkanRenderer::createGpuTimestampQueryPool()
+{
+	VkQueryPoolCreateInfo info{};
+	info.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+	info.queryType = VK_QUERY_TYPE_TIMESTAMP;
+	info.queryCount = 2 * _MAX_FRAMES_IN_FLIGHT; // begin + end per frame slot
+
+	if (vkCreateQueryPool(_vkDevice, &info, nullptr, &_vkGpuTimestampQueryPool) != VK_SUCCESS)
+	{
+		throw std::runtime_error("ERROR::VULKAN::GPU_TIMING::FAILED_TO_CREATE_QUERY_POOL\n");
+	}
 
 }
 
@@ -718,6 +1033,15 @@ void VulkanRenderer::selectPhysicalDevice()
 		{
 			_vkPhysicalDevice = physicalDevice;
 			_vkMsaaSamples = getMaxUsableSampleCount();
+			
+			VkPhysicalDeviceProperties vkDevprops{};
+			vkGetPhysicalDeviceProperties(_vkPhysicalDevice, &vkDevprops);
+			_vkTimestampPeriod = vkDevprops.limits.timestampPeriod; 
+
+
+			queryRayTracingProperties();
+
+
 		}
 	}
 
@@ -848,11 +1172,26 @@ void VulkanRenderer::createLogicalDevice()
 	engine::vk::QueueFamily queueFamily = getQueueFamilies(_vkPhysicalDevice);
 	float queuePriority = 1.0f;
 
-	VkPhysicalDeviceShaderDrawParametersFeatures drawFeat{
-	VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETERS_FEATURES
-	};
+	VkPhysicalDeviceShaderDrawParametersFeatures drawFeat{};
+	drawFeat.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETERS_FEATURES;
 	drawFeat.shaderDrawParameters = VK_TRUE;
 
+	// adding RT pipeline device feature
+	VkPhysicalDeviceRayTracingPipelineFeaturesKHR vkRTPipelineFeature{};
+	vkRTPipelineFeature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
+	vkRTPipelineFeature.rayTracingPipeline = VK_TRUE;
+
+	VkPhysicalDeviceAccelerationStructureFeaturesKHR vkAcStructFeature{};
+	vkAcStructFeature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+	vkAcStructFeature.accelerationStructure = VK_TRUE;
+	vkAcStructFeature.pNext = &vkRTPipelineFeature;
+
+	VkPhysicalDeviceBufferDeviceAddressFeaturesKHR vkBufferDeviceAddressFeature{};
+	vkBufferDeviceAddressFeature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES_KHR;
+	vkBufferDeviceAddressFeature.bufferDeviceAddress = VK_TRUE;
+	vkBufferDeviceAddressFeature.pNext = &vkAcStructFeature;
+
+	drawFeat.pNext = &vkBufferDeviceAddressFeature; 
 
 	VkPhysicalDeviceFeatures vkPhysicalDeviceFeatures{};
 	vkPhysicalDeviceFeatures.samplerAnisotropy = VK_FALSE;
@@ -911,6 +1250,59 @@ void VulkanRenderer::createLogicalDevice()
 
 	vkGetDeviceQueue(_vkDevice, queueFamily.graphicsFamily.value(), 0, &_vkGraphicsQueue);
 	vkGetDeviceQueue(_vkDevice, queueFamily.presentFamily.value(), 0, &_vkPresentationQueue);
+
+
+	// Load ray tracing function pointers from device driver
+	_vkRtCreateRayTracingPipelinesKHR_PFN =
+		reinterpret_cast<PFN_vkCreateRayTracingPipelinesKHR>(
+			vkGetDeviceProcAddr(_vkDevice, "vkCreateRayTracingPipelinesKHR"));
+
+	_vlRtGetRayTracingShaderGroupHandlesKHR_PFN =
+		reinterpret_cast<PFN_vkGetRayTracingShaderGroupHandlesKHR>(
+			vkGetDeviceProcAddr(_vkDevice, "vkGetRayTracingShaderGroupHandlesKHR"));
+
+	_vkRtCmdTraceRaysKHR_PFN =
+		reinterpret_cast<PFN_vkCmdTraceRaysKHR>(
+			vkGetDeviceProcAddr(_vkDevice, "vkCmdTraceRaysKHR"));
+
+	_vkCreateAccelerationStructureKHR_PFN =
+		reinterpret_cast<PFN_vkCreateAccelerationStructureKHR>(
+			vkGetDeviceProcAddr(_vkDevice, "vkCreateAccelerationStructureKHR"));
+
+	_vkDestroyAccelerationStructureKHR_PFN =
+		reinterpret_cast<PFN_vkDestroyAccelerationStructureKHR>(
+			vkGetDeviceProcAddr(_vkDevice, "vkDestroyAccelerationStructureKHR"));
+
+	_vkGetAccelerationStructureBuildSizesKHR_PFN =
+		reinterpret_cast<PFN_vkGetAccelerationStructureBuildSizesKHR>(
+			vkGetDeviceProcAddr(_vkDevice, "vkGetAccelerationStructureBuildSizesKHR"));
+
+	_vkGetAccelerationStructureDeviceAddressKHR_PFN =
+		reinterpret_cast<PFN_vkGetAccelerationStructureDeviceAddressKHR>(
+			vkGetDeviceProcAddr(_vkDevice, "vkGetAccelerationStructureDeviceAddressKHR"));
+
+	//_vkBuildAccelerationStructuresKHR_PFN =
+	//	reinterpret_cast<PFN_vkBuildAccelerationStructuresKHR>(
+	//		vkGetDeviceProcAddr(_vkDevice, "vkBuildAccelerationStructuresKHR"));
+
+	_vkCmdBuildAccelerationStructuresKHR_PFN =
+		reinterpret_cast<PFN_vkCmdBuildAccelerationStructuresKHR>(
+			vkGetDeviceProcAddr(_vkDevice, "vkCmdBuildAccelerationStructuresKHR"));
+
+
+	if (!_vkRtCreateRayTracingPipelinesKHR_PFN ||
+		!_vlRtGetRayTracingShaderGroupHandlesKHR_PFN ||
+		!_vkRtCmdTraceRaysKHR_PFN ||
+		!_vkCreateAccelerationStructureKHR_PFN ||
+		!_vkDestroyAccelerationStructureKHR_PFN ||
+		!_vkGetAccelerationStructureBuildSizesKHR_PFN ||
+		!_vkGetAccelerationStructureDeviceAddressKHR_PFN ||
+		//!_vkBuildAccelerationStructuresKHR_PFN ||
+		!_vkCmdBuildAccelerationStructuresKHR_PFN)
+	{
+		throw std::runtime_error("ERROR::VULKAN::RT::FAILED_TO_LOAD_RAY_TRACING_FUNCTION_POINTERS\n");
+	}
+
 }
 
 void VulkanRenderer::createSwapChain()
@@ -1102,6 +1494,15 @@ void VulkanRenderer::createDescriptorSetLayout()
 	vkUBOLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 	vkUBOLayoutBinding.pImmutableSamplers = nullptr; // Optional
 
+	/* RT camera UBO */
+	VkDescriptorSetLayoutBinding vkUBORtCameraBinding{};
+	vkUBORtCameraBinding.binding = 1;
+	vkUBORtCameraBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	vkUBORtCameraBinding.descriptorCount = 1;
+	/* binds to RAY GEN Stage*/
+	vkUBORtCameraBinding.stageFlags = VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+	vkUBORtCameraBinding.pImmutableSamplers = nullptr;
+
 	VkDescriptorSetLayoutBinding vkUBOLayoutBindingSSBO{};
 	vkUBOLayoutBindingSSBO.binding = 2;
 	vkUBOLayoutBindingSSBO.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -1109,7 +1510,73 @@ void VulkanRenderer::createDescriptorSetLayout()
 	vkUBOLayoutBindingSSBO.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 	vkUBOLayoutBindingSSBO.pImmutableSamplers = nullptr; // Optional
 	
-	std::array<VkDescriptorSetLayoutBinding, 2> bindings = { vkUBOLayoutBinding, vkUBOLayoutBindingSSBO };
+	// RT color image as storage image
+	VkDescriptorSetLayoutBinding vkImageBindingRt{};
+	vkImageBindingRt.binding = 3; // choose a free binding index
+	vkImageBindingRt.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+	vkImageBindingRt.descriptorCount = 1;
+
+	// Used by raygen/closest-hit/miss and fullscreen fragment (imageLoad)
+	vkImageBindingRt.stageFlags =
+		VK_SHADER_STAGE_RAYGEN_BIT_KHR |
+		VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR |
+		VK_SHADER_STAGE_MISS_BIT_KHR |
+		VK_SHADER_STAGE_FRAGMENT_BIT;
+	vkImageBindingRt.pImmutableSamplers = nullptr;
+
+
+	// TLAS binding for ray tracing
+	VkDescriptorSetLayoutBinding vkTlasBinding{};
+	vkTlasBinding.binding = 4;
+	vkTlasBinding.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+	vkTlasBinding.descriptorCount = 1;
+	vkTlasBinding.stageFlags =
+		VK_SHADER_STAGE_RAYGEN_BIT_KHR |
+		VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR; // hit shaders will use it too later
+	vkTlasBinding.pImmutableSamplers = nullptr;
+
+	// Vertex buffer as storage buffer (for ray tracing hit shader)
+	VkDescriptorSetLayoutBinding vkRtVertexBinding{};
+	vkRtVertexBinding.binding = 5;
+	vkRtVertexBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	vkRtVertexBinding.descriptorCount = 1;
+	vkRtVertexBinding.stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+	vkRtVertexBinding.pImmutableSamplers = nullptr;
+
+	// Index buffer as storage buffer
+	VkDescriptorSetLayoutBinding vkRtIndexBinding{};
+	vkRtIndexBinding.binding = 6;
+	vkRtIndexBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	vkRtIndexBinding.descriptorCount = 1;
+	vkRtIndexBinding.stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+	vkRtIndexBinding.pImmutableSamplers = nullptr;
+
+	VkDescriptorSetLayoutBinding vkRtInstanceBinding{};
+	vkRtInstanceBinding.binding = 7;
+	vkRtInstanceBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	vkRtInstanceBinding.descriptorCount = 1;
+	vkRtInstanceBinding.stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+	vkRtInstanceBinding.pImmutableSamplers = nullptr;
+
+	// Ray sample Settings
+	VkDescriptorSetLayoutBinding vkRtRaySamaplesBinding{};
+	vkRtRaySamaplesBinding.binding = 8;
+	vkRtRaySamaplesBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	vkRtRaySamaplesBinding.descriptorCount = 1;
+	vkRtRaySamaplesBinding.stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+	vkRtRaySamaplesBinding.pImmutableSamplers = nullptr;
+
+	std::array<VkDescriptorSetLayoutBinding, 9> bindings = { 
+		vkUBOLayoutBinding, 
+		vkUBORtCameraBinding, 
+		vkUBOLayoutBindingSSBO, 
+		vkImageBindingRt, 
+		vkTlasBinding,
+		vkRtVertexBinding,
+		vkRtIndexBinding,
+		vkRtInstanceBinding,
+		vkRtRaySamaplesBinding
+	};
 
 	VkDescriptorSetLayoutCreateInfo vkDescriptorLayoutInfo{};
 	vkDescriptorLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -1334,6 +1801,255 @@ void VulkanRenderer::createGraphicsPipeline()
 	vkDestroyShaderModule(_vkDevice, vkVertShaderModule, nullptr);
 }
 
+void VulkanRenderer::createRtGraphicsPipeline()
+{
+
+	std::vector<char> rt_vertShaderCode = readFile(findShaderPath("src\\shaders\\rt_vertex.spv").string());
+	std::vector<char> rt_fragShaderCode = readFile(findShaderPath("src\\shaders\\rt_fragment.spv").string());
+
+	VkShaderModule rt_vertShaderModule = createVKShaderModule(rt_vertShaderCode);
+	VkShaderModule rt_fragShaderModule = createVKShaderModule(rt_fragShaderCode);
+
+	VkPipelineShaderStageCreateInfo vkRtVertShaderStageInfo{};
+	vkRtVertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	vkRtVertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+	vkRtVertShaderStageInfo.module = rt_vertShaderModule;
+	vkRtVertShaderStageInfo.pName = "main";
+
+	VkPipelineShaderStageCreateInfo vkRtFragShaderStageInfo{};
+	vkRtFragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	vkRtFragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+	vkRtFragShaderStageInfo.module = rt_fragShaderModule;
+	vkRtFragShaderStageInfo.pName = "main";
+
+	VkPipelineShaderStageCreateInfo vkRtShaderStages[] = { vkRtVertShaderStageInfo, vkRtFragShaderStageInfo };
+
+	// No vertex input (use gl_VertexIndex)
+	VkPipelineVertexInputStateCreateInfo vkVertexInputInfo{};
+	vkVertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+	vkVertexInputInfo.vertexBindingDescriptionCount = 0;
+	vkVertexInputInfo.pVertexBindingDescriptions = nullptr;
+	vkVertexInputInfo.vertexAttributeDescriptionCount = 0;
+	vkVertexInputInfo.pVertexAttributeDescriptions = nullptr;
+
+	VkPipelineInputAssemblyStateCreateInfo vkInputAssembly{};
+	vkInputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+	vkInputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+	vkInputAssembly.primitiveRestartEnable = VK_FALSE;
+
+	VkViewport vkViewport{};
+	vkViewport.x = 0.0f;
+	vkViewport.y = 0.0f;
+	vkViewport.width = static_cast<float>(_vkSwapChainExtent.width);
+	vkViewport.height = static_cast<float>(_vkSwapChainExtent.height);
+	vkViewport.minDepth = 0.0f;
+	vkViewport.maxDepth = 1.0f;
+
+	VkRect2D vkScissor{};
+	vkScissor.offset = { 0, 0 };
+	vkScissor.extent = _vkSwapChainExtent;
+
+	VkPipelineViewportStateCreateInfo vkViewportStateInfo{};
+	vkViewportStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+	vkViewportStateInfo.viewportCount = 1;
+	vkViewportStateInfo.pViewports = &vkViewport;
+	vkViewportStateInfo.scissorCount = 1;
+	vkViewportStateInfo.pScissors = &vkScissor;
+
+	VkPipelineRasterizationStateCreateInfo vkRasterizerInfo{};
+	vkRasterizerInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+	vkRasterizerInfo.depthClampEnable = VK_FALSE;
+	vkRasterizerInfo.rasterizerDiscardEnable = VK_FALSE;
+	vkRasterizerInfo.polygonMode = VK_POLYGON_MODE_FILL;
+	vkRasterizerInfo.cullMode = VK_CULL_MODE_NONE;
+	vkRasterizerInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+	vkRasterizerInfo.depthBiasEnable = VK_FALSE;
+	vkRasterizerInfo.lineWidth = 1.0f;
+
+	VkPipelineMultisampleStateCreateInfo vkMultisamplingInfo{};
+	vkMultisamplingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+	vkMultisamplingInfo.sampleShadingEnable = VK_FALSE;
+	vkMultisamplingInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
+	VkPipelineColorBlendAttachmentState vkColorBlendAttachment{};
+	vkColorBlendAttachment.colorWriteMask =
+		VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+		VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+	vkColorBlendAttachment.blendEnable = VK_FALSE;
+
+	VkPipelineColorBlendStateCreateInfo vkColorBlendingInfo{};
+	vkColorBlendingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+	vkColorBlendingInfo.logicOpEnable = VK_FALSE;
+	vkColorBlendingInfo.attachmentCount = 1;
+	vkColorBlendingInfo.pAttachments = &vkColorBlendAttachment;
+
+	VkPipelineDepthStencilStateCreateInfo vkDepthStencilInfo{};
+	vkDepthStencilInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+	vkDepthStencilInfo.depthTestEnable = VK_FALSE;
+	vkDepthStencilInfo.depthWriteEnable = VK_FALSE;
+
+	VkPipelineRenderingCreateInfo vkRtPipeRendering{};
+	vkRtPipeRendering.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+	vkRtPipeRendering.colorAttachmentCount = 1;
+	vkRtPipeRendering.pColorAttachmentFormats = &_vkSwapChainImageFormat;
+	vkRtPipeRendering.depthAttachmentFormat = VK_FORMAT_UNDEFINED; // no depth for fullscreen blit
+
+
+	// Use existing pipeline layout (_vkPipelineLayout)
+	VkGraphicsPipelineCreateInfo vkRtGraphicsPipelineInfo{};
+	vkRtGraphicsPipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+	vkRtGraphicsPipelineInfo.stageCount = 2;
+	vkRtGraphicsPipelineInfo.pStages = vkRtShaderStages;
+	vkRtGraphicsPipelineInfo.pVertexInputState = &vkVertexInputInfo;
+	vkRtGraphicsPipelineInfo.pInputAssemblyState = &vkInputAssembly;
+	vkRtGraphicsPipelineInfo.pViewportState = &vkViewportStateInfo;
+	vkRtGraphicsPipelineInfo.pRasterizationState = &vkRasterizerInfo;
+	vkRtGraphicsPipelineInfo.pMultisampleState = &vkMultisamplingInfo;
+	vkRtGraphicsPipelineInfo.pDepthStencilState = &vkDepthStencilInfo;
+	vkRtGraphicsPipelineInfo.pColorBlendState = &vkColorBlendingInfo;
+	vkRtGraphicsPipelineInfo.layout = _vkPipelineLayout;
+
+	vkRtGraphicsPipelineInfo.renderPass = VK_NULL_HANDLE; 
+	vkRtGraphicsPipelineInfo.pNext = &vkRtPipeRendering; // hook dynamic rendering
+
+	if (vkCreateGraphicsPipelines(
+		_vkDevice,
+		VK_NULL_HANDLE,
+		1,
+		&vkRtGraphicsPipelineInfo,
+		nullptr,
+		&_vkRtGraphicsPipeline) != VK_SUCCESS)
+	{
+		throw std::runtime_error("ERROR::VULKAN::PIPELINE::FIALED_TO_CREATE_RT_GRAPHIS_PIPELINE\n");
+	}
+
+	vkDestroyShaderModule(_vkDevice, rt_vertShaderModule, nullptr);
+	vkDestroyShaderModule(_vkDevice, rt_fragShaderModule, nullptr);
+}
+
+void VulkanRenderer::createRayTracingPipeline()
+{
+	std::vector<char> raygenCode = readFile(findShaderPath("src\\shaders\\rt_raygen.spv").string());
+	std::vector<char> raymissCode = readFile(findShaderPath("src\\shaders\\rt_miss.spv").string());
+	std::vector<char> rayhitCode = readFile(findShaderPath("src\\shaders\\rt_hit.spv").string());
+	std::vector<char> rayshadowhitCode = readFile(findShaderPath("src\\shaders\\rt_shadow_hit.spv").string());
+	std::vector<char> rayshadowmissCode = readFile(findShaderPath("src\\shaders\\rt_shadow_miss.spv").string());
+
+	VkShaderModule vkRaygenModule = createVKShaderModule(raygenCode);
+	VkShaderModule vkRaymissModule = createVKShaderModule(raymissCode);
+	VkShaderModule vkRayhitModule = createVKShaderModule(rayhitCode);
+	VkShaderModule vkRayShadowHitModule = createVKShaderModule(rayshadowhitCode);
+	VkShaderModule vkRayShadowMissModule = createVKShaderModule(rayshadowmissCode);
+
+	VkPipelineShaderStageCreateInfo stages[5]{};
+
+	// Raygen stage
+	stages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	stages[0].stage = VK_SHADER_STAGE_RAYGEN_BIT_KHR;
+	stages[0].module = vkRaygenModule;
+	stages[0].pName = "main";
+
+	// Miss stage
+	stages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	stages[1].stage = VK_SHADER_STAGE_MISS_BIT_KHR;
+	stages[1].module = vkRaymissModule;
+	stages[1].pName = "main";
+
+	// Closest-hit stage (index 2)
+	stages[2].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	stages[2].stage = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+	stages[2].module = vkRayhitModule;
+	stages[2].pName = "main";
+
+
+	//  shadow miss
+	stages[3].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	stages[3].stage = VK_SHADER_STAGE_MISS_BIT_KHR;
+	stages[3].module = vkRayShadowMissModule;
+	stages[3].pName = "main";
+
+	//   shadow closest-hit
+	stages[4].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	stages[4].stage = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+	stages[4].module = vkRayShadowHitModule;
+	stages[4].pName = "main";
+
+	VkRayTracingShaderGroupCreateInfoKHR vkRtShadergroups[5]{};
+
+	// Group 0: raygen
+	vkRtShadergroups[0].sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
+	vkRtShadergroups[0].type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
+	vkRtShadergroups[0].generalShader = 0; // stages[0] = rt_raygen
+	vkRtShadergroups[0].closestHitShader = VK_SHADER_UNUSED_KHR;
+	vkRtShadergroups[0].anyHitShader = VK_SHADER_UNUSED_KHR;
+	vkRtShadergroups[0].intersectionShader = VK_SHADER_UNUSED_KHR;
+
+	// Group 1: radiance miss
+	vkRtShadergroups[1].sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
+	vkRtShadergroups[1].type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
+	vkRtShadergroups[1].generalShader = 1; // stages[1] = rt_miss
+	vkRtShadergroups[1].closestHitShader = VK_SHADER_UNUSED_KHR;
+	vkRtShadergroups[1].anyHitShader = VK_SHADER_UNUSED_KHR;
+	vkRtShadergroups[1].intersectionShader = VK_SHADER_UNUSED_KHR;
+
+	// Group 2: shadow miss  
+	vkRtShadergroups[2].sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
+	vkRtShadergroups[2].type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
+	vkRtShadergroups[2].generalShader = 3; // stages[3] = rt_shadow_miss
+	vkRtShadergroups[2].closestHitShader = VK_SHADER_UNUSED_KHR;
+	vkRtShadergroups[2].anyHitShader = VK_SHADER_UNUSED_KHR;
+	vkRtShadergroups[2].intersectionShader = VK_SHADER_UNUSED_KHR;
+
+	// Group 3: radiance hit
+	vkRtShadergroups[3].sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
+	vkRtShadergroups[3].type = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR;
+	vkRtShadergroups[3].generalShader = VK_SHADER_UNUSED_KHR;
+	vkRtShadergroups[3].closestHitShader = 2; // stages[2] = rt_hit.rhit
+	vkRtShadergroups[3].anyHitShader = VK_SHADER_UNUSED_KHR;
+	vkRtShadergroups[3].intersectionShader = VK_SHADER_UNUSED_KHR;
+
+	// Group 4: shadow hit
+	vkRtShadergroups[4].sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
+	vkRtShadergroups[4].type = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR;
+	vkRtShadergroups[4].generalShader = VK_SHADER_UNUSED_KHR;
+	vkRtShadergroups[4].closestHitShader = 4; // stages[4] = rt_shadow_hit.rshit
+	vkRtShadergroups[4].anyHitShader = VK_SHADER_UNUSED_KHR;
+	vkRtShadergroups[4].intersectionShader = VK_SHADER_UNUSED_KHR;
+
+
+	// 3) Pipeline create info
+	VkRayTracingPipelineCreateInfoKHR rtInfo{};
+	rtInfo.sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR;
+	rtInfo.stageCount = 5;
+	rtInfo.pStages = stages;
+	rtInfo.groupCount = 5;
+	rtInfo.pGroups = vkRtShadergroups;
+	rtInfo.maxPipelineRayRecursionDepth = 2;
+	// existing descriptor layout / pipeline layout
+	rtInfo.layout = _vkPipelineLayout;
+
+	VkResult res = _vkRtCreateRayTracingPipelinesKHR_PFN(
+		_vkDevice,
+		VK_NULL_HANDLE,            // deferred operation
+		VK_NULL_HANDLE,            // pipeline cache
+		1,
+		&rtInfo,
+		nullptr,
+		&_vkRtPipeline
+	);
+
+	vkDestroyShaderModule(_vkDevice, vkRaygenModule, nullptr);
+	vkDestroyShaderModule(_vkDevice, vkRaymissModule, nullptr);
+	vkDestroyShaderModule(_vkDevice, vkRayhitModule, nullptr);
+	vkDestroyShaderModule(_vkDevice, vkRayShadowHitModule, nullptr);
+	vkDestroyShaderModule(_vkDevice, vkRayShadowMissModule, nullptr);
+
+	if (res != VK_SUCCESS)
+	{
+		throw std::runtime_error("ERROR::VULKAN::RT::FAILED_TO_CREATE_RAY_TRACING_PIPELINE\n");
+	}
+}
+
 std::vector<char> VulkanRenderer::readFile(const std::string& filename) 
 {
 	std::ifstream file(filename, std::ios::ate | std::ios::binary);
@@ -1401,6 +2117,54 @@ void VulkanRenderer::createColorResources()
 	);
 }
 
+void VulkanRenderer::createDepthResources()
+{
+	VkFormat vkDepthFormat = findDepthFormat();
+
+	createImage(_vkSwapChainExtent.width, _vkSwapChainExtent.height, 1, _vkMsaaSamples, vkDepthFormat,
+		VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _vkDepthImage, _vkDepthImageMemory);
+
+	_vkDepthImageView = createImageView(_vkDepthImage, vkDepthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
+
+	transitionImageLayout(_vkDepthImage, vkDepthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1);
+}
+
+void VulkanRenderer::createRtColourResources()
+{
+	// using R8G8B8A8_UNORM to use VK_IMAGE_USAGE_STORAGE_BIT
+	VkFormat rtFormat = VK_FORMAT_R8G8B8A8_UNORM;
+
+	createImage(
+		_vkSwapChainExtent.width,
+		_vkSwapChainExtent.height,
+		1,                             // mipLevels
+		VK_SAMPLE_COUNT_1_BIT,         // numSamples
+		rtFormat,
+		VK_IMAGE_TILING_OPTIMAL,
+		VK_IMAGE_USAGE_STORAGE_BIT |   // raygen  
+		VK_IMAGE_USAGE_SAMPLED_BIT,    // fullscreen pass samples 
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		_vkRtColorImage,
+		_vkRtColorImageMemory
+	);
+
+	_vkRtColorImageView = createImageView(
+		_vkRtColorImage,
+		rtFormat,
+		VK_IMAGE_ASPECT_COLOR_BIT,
+		1
+	);
+
+	transitionImageLayout(
+		_vkRtColorImage,
+		rtFormat,
+		VK_IMAGE_LAYOUT_UNDEFINED,
+		VK_IMAGE_LAYOUT_GENERAL,
+		1
+	);
+}
+
 void VulkanRenderer::createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling
 	, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory)
 {
@@ -1449,8 +2213,7 @@ uint32_t VulkanRenderer::getMemoryType(uint32_t typeFilter, VkMemoryPropertyFlag
 
 	for (uint32_t i = 0; i < vkMemProperties.memoryTypeCount; i++) {
 		if ((typeFilter & (1 << i)) &&
-			(vkMemProperties.memoryTypes[i].propertyFlags & properties)
-			== properties) {
+			(vkMemProperties.memoryTypes[i].propertyFlags & properties) == properties) {
 
 			return i;
 		}
@@ -1459,19 +2222,6 @@ uint32_t VulkanRenderer::getMemoryType(uint32_t typeFilter, VkMemoryPropertyFlag
 	throw std::runtime_error("ERROR::VULKAN::MEMORY::GET_MEMORY_TYPE::FIALED_TO_FIND_SUITABLE_MEMORY_TYPE\n");
 
 	return 0;
-}
-
-void VulkanRenderer::createDepthResources()
-{
-	VkFormat vkDepthFormat = findDepthFormat();
-
-	createImage(_vkSwapChainExtent.width, _vkSwapChainExtent.height, 1, _vkMsaaSamples, vkDepthFormat,
-		VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, _vkDepthImage, _vkDepthImageMemory);
-
-	_vkDepthImageView = createImageView(_vkDepthImage, vkDepthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
-
-	transitionImageLayout(_vkDepthImage, vkDepthFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, 1);
 }
 
 void VulkanRenderer::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels)
@@ -1532,6 +2282,18 @@ void VulkanRenderer::transitionImageLayout(VkImage image, VkFormat format, VkIma
 		vkSourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 		vkDestinationStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 	}
+	else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED &&
+		newLayout == VK_IMAGE_LAYOUT_GENERAL)
+	{
+		vkImageMemoryBarrier.srcAccessMask = 0;
+		vkImageMemoryBarrier.dstAccessMask =
+			VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+
+		vkSourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+		vkDestinationStage =
+			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
+			VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
+	}
 	else {
 		throw std::invalid_argument("WARNING::INVALID_ARGUMENT::VULAKN::UNSUPPORTED_LAYOUT_TRANSITION\n");
 	}
@@ -1587,15 +2349,35 @@ bool VulkanRenderer::hasStencilComponent(VkFormat format)
 
 void VulkanRenderer::endSingleTimeCommands(VkCommandBuffer commandBuffer)
 {
-	vkEndCommandBuffer(commandBuffer);
+	//vkEndCommandBuffer(commandBuffer);
+
+
+	VkResult res = vkEndCommandBuffer(commandBuffer);
+	if (res != VK_SUCCESS) {
+		std::cerr << "endSingleTimeCommands: vkEndCommandBuffer failed, VkResult = " << res << "\n";
+	}
+
 
 	VkSubmitInfo vkSubmitInfo{};
 	vkSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	vkSubmitInfo.commandBufferCount = 1;
 	vkSubmitInfo.pCommandBuffers = &commandBuffer;
 
-	vkQueueSubmit(_vkGraphicsQueue, 1, &vkSubmitInfo, VK_NULL_HANDLE);
-	vkQueueWaitIdle(_vkGraphicsQueue);
+	//vkQueueSubmit(_vkGraphicsQueue, 1, &vkSubmitInfo, VK_NULL_HANDLE);
+
+
+	res = vkQueueSubmit(_vkGraphicsQueue, 1, &vkSubmitInfo, VK_NULL_HANDLE);
+	if (res != VK_SUCCESS) {
+		std::cerr << "endSingleTimeCommands: vkQueueSubmit failed, VkResult = " << res << "\n";
+	}
+
+	//vkQueueWaitIdle(_vkGraphicsQueue);
+
+
+	res = vkQueueWaitIdle(_vkGraphicsQueue);
+	if (res != VK_SUCCESS) {
+		std::cerr << "endSingleTimeCommands: vkQueueWaitIdle failed, VkResult = " << res << "\n";
+	}
 
 	vkFreeCommandBuffers(_vkDevice, _vkCommandPool, 1, &commandBuffer);
 }
@@ -1678,6 +2460,423 @@ void VulkanRenderer::submitRenderData(const std::vector<engine::mesh::Vertex>& v
 	vkFreeMemory(_vkDevice, vkIndexDeviceStagingBufferMemory, nullptr);
 }
 
+void VulkanRenderer::submitRTRenderData(const std::vector<engine::mesh::Vertex>& vertices, const std::vector<unsigned int>& indices)
+{
+
+	vkDeviceWaitIdle(_vkDevice);
+
+	/* vertices */
+	VkDeviceSize vkVertexBufferSize =
+		sizeof(engine::mesh::Vertex) * vertices.size();
+
+	_vkRtVertexCount = static_cast<uint32_t>(vertices.size());
+	_vkRtIndexCount = static_cast<uint32_t>(indices.size());
+
+	// Destroy previous RT vertex buffer if any
+	if (_vkRtVertexBuffer != VK_NULL_HANDLE) {
+		vkDestroyBuffer(_vkDevice, _vkRtVertexBuffer, nullptr);
+		vkFreeMemory(_vkDevice, _vkRtVertexBufferMemory, nullptr);
+		_vkRtVertexBuffer = VK_NULL_HANDLE;
+		_vkRtVertexBufferMemory = VK_NULL_HANDLE;
+	}
+
+	VkBuffer vkVertexStagingBuffer;
+	VkDeviceMemory vkVertexDeviceStagingBufferMemory;
+
+	createBuffer(
+		vkVertexBufferSize,
+		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+		VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		vkVertexStagingBuffer,
+		vkVertexDeviceStagingBufferMemory);
+
+	/* filling */
+	void* vertexData;
+	vkMapMemory(_vkDevice, vkVertexDeviceStagingBufferMemory, 0,
+		vkVertexBufferSize, 0, &vertexData);
+	memcpy(vertexData, vertices.data(), (size_t)vkVertexBufferSize);
+	vkUnmapMemory(_vkDevice, vkVertexDeviceStagingBufferMemory);
+
+	createBuffer(
+		vkVertexBufferSize,
+		VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+		VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+		VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
+		VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
+		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		_vkRtVertexBuffer,
+		_vkRtVertexBufferMemory);
+
+	copyBuffer(vkVertexStagingBuffer, _vkRtVertexBuffer, vkVertexBufferSize);
+
+	vkDestroyBuffer(_vkDevice, vkVertexStagingBuffer, nullptr);
+	vkFreeMemory(_vkDevice, vkVertexDeviceStagingBufferMemory, nullptr);
+
+	/* indices */
+	VkDeviceSize vkIndexBufferSize =
+		sizeof(unsigned int) * indices.size();
+
+	// Destroy previous RT index buffer if any
+	if (_vkRtIndexBuffer != VK_NULL_HANDLE) {
+		vkDestroyBuffer(_vkDevice, _vkRtIndexBuffer, nullptr);
+		vkFreeMemory(_vkDevice, _vkRtIndexBufferMemory, nullptr);
+		_vkRtIndexBuffer = VK_NULL_HANDLE;
+		_vkRtIndexBufferMemory = VK_NULL_HANDLE;
+	}
+
+	VkBuffer vkIndexStagingBuffer;
+	VkDeviceMemory vkIndexDeviceStagingBufferMemory;
+
+	createBuffer(
+		vkIndexBufferSize,
+		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+		VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		vkIndexStagingBuffer,
+		vkIndexDeviceStagingBufferMemory);
+
+	void* indexData;
+	vkMapMemory(_vkDevice, vkIndexDeviceStagingBufferMemory, 0,
+		vkIndexBufferSize, 0, &indexData);
+	memcpy(indexData, indices.data(), (size_t)vkIndexBufferSize);
+	vkUnmapMemory(_vkDevice, vkIndexDeviceStagingBufferMemory);
+
+	createBuffer(
+		vkIndexBufferSize,
+		VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+		VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
+		VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
+		VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
+		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		_vkRtIndexBuffer,
+		_vkRtIndexBufferMemory);
+
+	copyBuffer(vkIndexStagingBuffer, _vkRtIndexBuffer, vkIndexBufferSize);
+
+	vkDestroyBuffer(_vkDevice, vkIndexStagingBuffer, nullptr);
+	vkFreeMemory(_vkDevice, vkIndexDeviceStagingBufferMemory, nullptr);
+
+	// make sure nothing is using the old RT buffers
+	vkDeviceWaitIdle(_vkDevice);
+
+
+	//destroy previous mesh BLAS if any
+	if (_vkMeshBlas != VK_NULL_HANDLE) {
+		_vkDestroyAccelerationStructureKHR_PFN(_vkDevice, _vkMeshBlas, nullptr);
+		_vkMeshBlas = VK_NULL_HANDLE;
+	}
+	if (_vkMeshBlasBuffer != VK_NULL_HANDLE) {
+		vkDestroyBuffer(_vkDevice, _vkMeshBlasBuffer, nullptr);
+		_vkMeshBlasBuffer = VK_NULL_HANDLE;
+	}
+	if (_vkMeshBlasMemory != VK_NULL_HANDLE) {
+		vkFreeMemory(_vkDevice, _vkMeshBlasMemory, nullptr);
+		_vkMeshBlasMemory = VK_NULL_HANDLE;
+	}
+
+	const uint32_t vertexCount = static_cast<uint32_t>(vertices.size());
+	const uint32_t indexCount = static_cast<uint32_t>(indices.size());
+	const uint32_t primitiveCount = indexCount / 3; // triangles
+
+	// Device addresses for the GPU vertex/index buffers
+	VkBufferDeviceAddressInfo addrInfo{};
+	addrInfo.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+
+	addrInfo.buffer = _vkRtVertexBuffer;
+	VkDeviceAddress vertexAddress = vkGetBufferDeviceAddress(_vkDevice, &addrInfo);
+
+	addrInfo.buffer = _vkRtIndexBuffer;
+	VkDeviceAddress indexAddress = vkGetBufferDeviceAddress(_vkDevice, &addrInfo);
+
+	//Describe triangle geometry for BLAS build
+	VkAccelerationStructureGeometryTrianglesDataKHR triangles{};
+	triangles.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
+	triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;         // position format
+	triangles.vertexData.deviceAddress = vertexAddress;
+	triangles.vertexStride = sizeof(engine::mesh::Vertex);        // assumes position at start
+	triangles.maxVertex = vertexCount;
+	triangles.indexType = VK_INDEX_TYPE_UINT32;
+	triangles.indexData.deviceAddress = indexAddress;
+	triangles.transformData.deviceAddress = 0;                    // no per-primitive transform
+
+	VkAccelerationStructureGeometryKHR asGeom{};
+	asGeom.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+	asGeom.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
+	asGeom.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
+	asGeom.geometry.triangles = triangles;
+
+	VkAccelerationStructureBuildGeometryInfoKHR buildInfo{};
+	buildInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+	buildInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+	buildInfo.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+	buildInfo.geometryCount = 1;
+	buildInfo.pGeometries = &asGeom;
+
+	VkAccelerationStructureBuildSizesInfoKHR sizeInfo{};
+	sizeInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
+
+	_vkGetAccelerationStructureBuildSizesKHR_PFN(
+		_vkDevice,
+		VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
+		&buildInfo,
+		&primitiveCount,
+		&sizeInfo);
+
+	// Allocate buffer for the BLAS itself
+	createBuffer(
+		sizeInfo.accelerationStructureSize,
+		VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR |
+		VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		_vkMeshBlasBuffer,
+		_vkMeshBlasMemory);
+
+	VkAccelerationStructureCreateInfoKHR asCreate{};
+	asCreate.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
+	asCreate.buffer = _vkMeshBlasBuffer;
+	asCreate.offset = 0;
+	asCreate.size = sizeInfo.accelerationStructureSize;
+	asCreate.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+
+	if (_vkCreateAccelerationStructureKHR_PFN(
+		_vkDevice, &asCreate, nullptr, &_vkMeshBlas) != VK_SUCCESS)
+	{
+		throw std::runtime_error("ERROR::VULKAN::RT::FAILED_TO_CREATE_MESH_BLAS");
+	}
+
+	// Scratch buffer for BLAS build
+	VkBuffer scratchBuffer;
+	VkDeviceMemory scratchMemory;
+
+	createBuffer(
+		sizeInfo.buildScratchSize,
+		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+		VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		scratchBuffer,
+		scratchMemory);
+
+	addrInfo.buffer = scratchBuffer;
+	VkDeviceAddress scratchAddress = vkGetBufferDeviceAddress(_vkDevice, &addrInfo);
+
+	/// Build BLAS on the device
+	buildInfo.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
+	buildInfo.dstAccelerationStructure = _vkMeshBlas;
+	buildInfo.scratchData.deviceAddress = scratchAddress;
+
+	VkAccelerationStructureBuildRangeInfoKHR rangeInfo{};
+	rangeInfo.primitiveCount = primitiveCount;
+	rangeInfo.primitiveOffset = 0;
+	rangeInfo.firstVertex = 0;
+	rangeInfo.transformOffset = 0;
+
+	VkAccelerationStructureBuildRangeInfoKHR* pRangeInfo = &rangeInfo;
+
+	VkCommandBuffer cmd_blas = beginSingleTimeCommands();
+
+	_vkCmdBuildAccelerationStructuresKHR_PFN(
+		cmd_blas,
+		1,
+		&buildInfo,
+		&pRangeInfo);
+
+	endSingleTimeCommands(cmd_blas);
+
+	//Get BLAS device address (for TLAS instances later)
+	VkAccelerationStructureDeviceAddressInfoKHR asAddr{};
+	asAddr.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
+	asAddr.accelerationStructure = _vkMeshBlas;
+
+	_vkMeshBlasDeviceAddress =
+		_vkGetAccelerationStructureDeviceAddressKHR_PFN(_vkDevice, &asAddr);
+
+	// Free scratch buffer (BLAS is now self-contained)
+	vkDestroyBuffer(_vkDevice, scratchBuffer, nullptr);
+	vkFreeMemory(_vkDevice, scratchMemory, nullptr);
+
+	// === Build a TLAS that references the mesh BLAS ===
+
+	// Destroy previous mesh TLAS if any
+	if (_vkMeshTlas != VK_NULL_HANDLE) {
+		_vkDestroyAccelerationStructureKHR_PFN(_vkDevice, _vkMeshTlas, nullptr);
+		_vkMeshTlas = VK_NULL_HANDLE;
+	}
+	if (_vkMeshTlasBuffer != VK_NULL_HANDLE) {
+		vkDestroyBuffer(_vkDevice, _vkMeshTlasBuffer, nullptr);
+		_vkMeshTlasBuffer = VK_NULL_HANDLE;
+	}
+	if (_vkMeshTlasMemory != VK_NULL_HANDLE) {
+		vkFreeMemory(_vkDevice, _vkMeshTlasMemory, nullptr);
+		_vkMeshTlasMemory = VK_NULL_HANDLE;
+	}
+
+	// Create TLAS instance referencing _vkMeshBlas
+	VkAccelerationStructureInstanceKHR instance{};
+	// identity transform, row-major 3x4
+	instance.transform.matrix[0][0] = 1.0f;
+	instance.transform.matrix[0][1] = 0.0f;
+	instance.transform.matrix[0][2] = 0.0f;
+	instance.transform.matrix[0][3] = 0.0f;
+
+	instance.transform.matrix[1][0] = 0.0f;
+	instance.transform.matrix[1][1] = 1.0f;
+	instance.transform.matrix[1][2] = 0.0f;
+	instance.transform.matrix[1][3] = 0.0f;
+
+	instance.transform.matrix[2][0] = 0.0f;
+	instance.transform.matrix[2][1] = 0.0f;
+	instance.transform.matrix[2][2] = 1.0f;
+	instance.transform.matrix[2][3] = 0.0f;
+
+	instance.instanceCustomIndex = 0;
+	instance.mask = 0xFF;
+	instance.instanceShaderBindingTableRecordOffset = 0;
+	instance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+	instance.accelerationStructureReference = _vkMeshBlasDeviceAddress;
+
+	// Instance buffer
+	VkBuffer       instanceBuffer;
+	VkDeviceMemory instanceMemory;
+	VkDeviceSize   instanceSize = sizeof(VkAccelerationStructureInstanceKHR);
+
+	createBuffer(
+		instanceSize,
+		VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
+		VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+		VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		instanceBuffer,
+		instanceMemory
+	);
+
+	void* mapped = nullptr;
+	vkMapMemory(_vkDevice, instanceMemory, 0, instanceSize, 0, &mapped);
+	memcpy(mapped, &instance, sizeof(instance));
+	vkUnmapMemory(_vkDevice, instanceMemory);
+
+	//Get device address of the instance buffer
+	VkBufferDeviceAddressInfo addrInfoTLAS{};
+	addrInfoTLAS.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+	addrInfoTLAS.buffer = instanceBuffer;
+	VkDeviceAddress instanceAddress = vkGetBufferDeviceAddress(_vkDevice, &addrInfoTLAS);
+
+	// Describe TLAS geometry (instances)
+	VkAccelerationStructureGeometryInstancesDataKHR instData{};
+	instData.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
+	instData.arrayOfPointers = VK_FALSE;
+	instData.data.deviceAddress = instanceAddress;
+
+	VkAccelerationStructureGeometryKHR tlasGeom{};
+	tlasGeom.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+	tlasGeom.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR;
+	tlasGeom.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
+	tlasGeom.geometry.instances = instData;
+
+	VkAccelerationStructureBuildGeometryInfoKHR tlasBuildInfo{};
+	tlasBuildInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+	tlasBuildInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
+	tlasBuildInfo.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+	tlasBuildInfo.geometryCount = 1;
+	tlasBuildInfo.pGeometries = &tlasGeom;
+
+	uint32_t tlasPrimitiveCount = 1; // one instance
+
+	VkAccelerationStructureBuildSizesInfoKHR tlasSize{};
+	tlasSize.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
+
+	_vkGetAccelerationStructureBuildSizesKHR_PFN(
+		_vkDevice,
+		VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
+		&tlasBuildInfo,
+		&tlasPrimitiveCount,
+		&tlasSize
+	);
+
+	/// Create TLAS buffer + TLAS object
+	createBuffer(
+		tlasSize.accelerationStructureSize,
+		VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR |
+		VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		_vkMeshTlasBuffer,
+		_vkMeshTlasMemory
+	);
+
+	VkAccelerationStructureCreateInfoKHR tlasCreate{};
+	tlasCreate.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
+	tlasCreate.buffer = _vkMeshTlasBuffer;
+	tlasCreate.offset = 0;
+	tlasCreate.size = tlasSize.accelerationStructureSize;
+	tlasCreate.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
+
+	if (_vkCreateAccelerationStructureKHR_PFN(
+		_vkDevice, &tlasCreate, nullptr, &_vkMeshTlas) != VK_SUCCESS)
+	{
+		throw std::runtime_error("ERROR::VULKAN::RT::FAILED_TO_CREATE_MESH_TLAS");
+	}
+
+	//Scratch buffer for TLAS build
+	VkBuffer       tlasScratchBuffer;
+	VkDeviceMemory tlasScratchMemory;
+
+	createBuffer(
+		tlasSize.buildScratchSize,
+		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+		VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		tlasScratchBuffer,
+		tlasScratchMemory
+	);
+
+	VkBufferDeviceAddressInfo addrInfoScratch{};
+	addrInfoScratch.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+	addrInfoScratch.buffer = tlasScratchBuffer;
+	VkDeviceAddress tlasScratchAddress =
+		vkGetBufferDeviceAddress(_vkDevice, &addrInfoScratch);
+
+	tlasBuildInfo.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
+	tlasBuildInfo.dstAccelerationStructure = _vkMeshTlas;
+	tlasBuildInfo.scratchData.deviceAddress = tlasScratchAddress;
+
+	VkAccelerationStructureBuildRangeInfoKHR tlasRange{};
+	tlasRange.primitiveCount = tlasPrimitiveCount;
+	tlasRange.primitiveOffset = 0;
+	tlasRange.firstVertex = 0;
+	tlasRange.transformOffset = 0;
+
+	VkAccelerationStructureBuildRangeInfoKHR* pTlasRange = &tlasRange;
+
+	VkCommandBuffer cmd_tlas = beginSingleTimeCommands();
+
+	_vkCmdBuildAccelerationStructuresKHR_PFN(
+		cmd_tlas,
+		1,
+		&tlasBuildInfo,
+		&pTlasRange
+	);
+
+	endSingleTimeCommands(cmd_tlas);
+
+	//Get TLAS device address (optional but nice)
+	VkAccelerationStructureDeviceAddressInfoKHR tlasAddr{};
+	tlasAddr.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
+	tlasAddr.accelerationStructure = _vkMeshTlas;
+
+	_vkMeshTlasDeviceAddress =
+		_vkGetAccelerationStructureDeviceAddressKHR_PFN(_vkDevice, &tlasAddr);
+
+	//Clean up TLAS scratch + instance buffer
+	vkDestroyBuffer(_vkDevice, tlasScratchBuffer, nullptr);
+	vkFreeMemory(_vkDevice, tlasScratchMemory, nullptr);
+
+	vkDestroyBuffer(_vkDevice, instanceBuffer, nullptr);
+	vkFreeMemory(_vkDevice, instanceMemory, nullptr);
+
+}
+
 void VulkanRenderer::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
 	VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory)
 {
@@ -1701,6 +2900,18 @@ void VulkanRenderer::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
 	allocInfo.allocationSize = memRequirements.size;
 	allocInfo.memoryTypeIndex = getMemoryType(memRequirements.memoryTypeBits, properties);
 
+	VkMemoryAllocateFlagsInfo allocFlags{};
+	if (usage & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT) {
+		allocFlags.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO;
+		allocFlags.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT;
+		allocFlags.deviceMask = 0x1; // single-GPU
+
+		allocInfo.pNext = &allocFlags;
+	}
+	else {
+		allocInfo.pNext = nullptr;
+	}
+
 	if (vkAllocateMemory(_vkDevice, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
 		throw std::runtime_error("ERROR::VULKAN::MEMORY::FAILED_TO_ALOCATE_VERTEX_BUFFER_MEMORY\n");
 	}
@@ -1723,27 +2934,56 @@ void VulkanRenderer::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDevice
 void VulkanRenderer::createUniformBuffers()
 {
 	VkDeviceSize vkBufferSize = sizeof(engine::math::Mat4f);
+	VkDeviceSize vkRtBufferSize = sizeof(engine::vk::RtSamples);
 
 	_vkUniformBuffers.resize(_MAX_FRAMES_IN_FLIGHT);
 	_vkUniformBuffersMemory.resize(_MAX_FRAMES_IN_FLIGHT);
 	_vkUniformBuffersMapped.resize(_MAX_FRAMES_IN_FLIGHT);
 
-	for (size_t i = 0; i < _MAX_FRAMES_IN_FLIGHT; i++) {
+	_vkRtSampleUniform.resize(_MAX_FRAMES_IN_FLIGHT);
+	_vkRtUniformBuffersMemory.resize(_MAX_FRAMES_IN_FLIGHT);
+	_vkRtUniformBuffersMapped.resize(_MAX_FRAMES_IN_FLIGHT);
+
+	for (size_t i = 0; i < _MAX_FRAMES_IN_FLIGHT; i++) 
+	{
 		createBuffer(vkBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
 			, _vkUniformBuffers[i], _vkUniformBuffersMemory[i]);
 		vkMapMemory(_vkDevice, _vkUniformBuffersMemory[i], 0, vkBufferSize, 0, &_vkUniformBuffersMapped[i]);
+
+
+		createBuffer(vkRtBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+			, _vkRtSampleUniform[i], _vkRtUniformBuffersMemory[i]);
+		vkMapMemory(_vkDevice, _vkRtUniformBuffersMemory[i], 0, vkRtBufferSize, 0, &_vkRtUniformBuffersMapped[i]);
 	}
 }
 
 void VulkanRenderer::createDescriptorPool()
 {
-	std::array<VkDescriptorPoolSize, 2> vkDescriptorPoolSize{};
+	std::array<VkDescriptorPoolSize, 6> vkDescriptorPoolSize{};
 
 	vkDescriptorPoolSize[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	vkDescriptorPoolSize[0].descriptorCount = static_cast<uint32_t>(_MAX_FRAMES_IN_FLIGHT);
 
-	vkDescriptorPoolSize[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-	vkDescriptorPoolSize[1].descriptorCount = static_cast<uint32_t>(_MAX_FRAMES_IN_FLIGHT);
+	//  RT camera UBO
+	vkDescriptorPoolSize[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	vkDescriptorPoolSize[1].descriptorCount = _MAX_FRAMES_IN_FLIGHT;
+
+	vkDescriptorPoolSize[2].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	
+	// Increase Storage buffer for RT (bindings 2, 5, 6 ,7)
+	vkDescriptorPoolSize[2].descriptorCount = static_cast<uint32_t>(4 * _MAX_FRAMES_IN_FLIGHT);
+
+	// RT storage image for rtColor
+	vkDescriptorPoolSize[3].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+	vkDescriptorPoolSize[3].descriptorCount = static_cast<uint32_t>(_MAX_FRAMES_IN_FLIGHT);
+	
+	// for TLAS
+	vkDescriptorPoolSize[4].type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+	vkDescriptorPoolSize[4].descriptorCount = static_cast<uint32_t>(_MAX_FRAMES_IN_FLIGHT);
+
+	// ray samples
+	vkDescriptorPoolSize[5].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	vkDescriptorPoolSize[5].descriptorCount = static_cast<uint32_t>(_MAX_FRAMES_IN_FLIGHT);
 
 
 	VkDescriptorPoolCreateInfo vkDescriptorPoolCreateInfo{};
@@ -1803,12 +3043,36 @@ void VulkanRenderer::createDescriptorSets()
 		vkDescriptorBufferInfo.offset = 0;
 		vkDescriptorBufferInfo.range = sizeof(engine::math::Mat4f);
 
+		//  RT camera buffer info
+		VkDescriptorBufferInfo vkDescriptorRtCameraBufferInfo{};
+		vkDescriptorRtCameraBufferInfo.buffer = _vkRtCameraBuffers[i];
+		vkDescriptorRtCameraBufferInfo.offset = 0;
+		vkDescriptorRtCameraBufferInfo.range = sizeof(engine::vk::RtCameraUBO);
+
 		VkDescriptorBufferInfo vkDescriptorBufferInfoSSBO{};
 		vkDescriptorBufferInfoSSBO.buffer = _perDraw[i].ssbo;
 		vkDescriptorBufferInfoSSBO.offset = 0;
 		vkDescriptorBufferInfoSSBO.range = VK_WHOLE_SIZE;
 
-		std::array<VkWriteDescriptorSet, 2> vVkDescriptorWrites{};
+		//  image info for RT Color
+		VkDescriptorImageInfo  vkDescriptorBufferInfoRt{};
+		vkDescriptorBufferInfoRt.imageLayout = VK_IMAGE_LAYOUT_GENERAL; // use it as storage image
+		vkDescriptorBufferInfoRt.imageView = _vkRtColorImageView;
+		vkDescriptorBufferInfoRt.sampler = VK_NULL_HANDLE; 
+
+		// Acceleration structure info (TLAS)
+		VkWriteDescriptorSetAccelerationStructureKHR vkAccelInfo{};
+		vkAccelInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR;
+		vkAccelInfo.accelerationStructureCount = 1;
+		vkAccelInfo.pAccelerationStructures = &_vkTestTlas;
+
+		//  RT Samples
+		VkDescriptorBufferInfo vkDescriptorRTSamples{};
+		vkDescriptorRTSamples.buffer = _vkRtSampleUniform[i];
+		vkDescriptorRTSamples.offset = 0;
+		vkDescriptorRTSamples.range = sizeof(engine::vk::RtSamples);
+
+		std::array<VkWriteDescriptorSet, 6> vVkDescriptorWrites{};
 
 		vVkDescriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		vVkDescriptorWrites[0].dstSet = _vkDescriptorSets[i];
@@ -1818,13 +3082,56 @@ void VulkanRenderer::createDescriptorSets()
 		vVkDescriptorWrites[0].descriptorCount = 1;
 		vVkDescriptorWrites[0].pBufferInfo = &vkDescriptorBufferInfo;
 
+
+		// binding 1: RT camera UBO
 		vVkDescriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		vVkDescriptorWrites[1].dstSet = _vkDescriptorSets[i];
-		vVkDescriptorWrites[1].dstBinding = 2; // <<< binding 2, matches shader
-		vVkDescriptorWrites[1].dstArrayElement = 0;
-		vVkDescriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		vVkDescriptorWrites[1].dstBinding = 1;
+		vVkDescriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		vVkDescriptorWrites[1].descriptorCount = 1;
-		vVkDescriptorWrites[1].pBufferInfo = &vkDescriptorBufferInfoSSBO;
+		vVkDescriptorWrites[1].pBufferInfo = &vkDescriptorRtCameraBufferInfo;
+
+		vVkDescriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		vVkDescriptorWrites[2].dstSet = _vkDescriptorSets[i];
+		vVkDescriptorWrites[2].dstBinding = 2; // <<< binding 2, matches shader
+		vVkDescriptorWrites[2].dstArrayElement = 0;
+		vVkDescriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		vVkDescriptorWrites[2].descriptorCount = 1;
+		vVkDescriptorWrites[2].pBufferInfo = &vkDescriptorBufferInfoSSBO;
+
+		// binding 3: RT storage image
+		vVkDescriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		vVkDescriptorWrites[3].dstSet = _vkDescriptorSets[i];
+		vVkDescriptorWrites[3].dstBinding = 3;
+		vVkDescriptorWrites[3].dstArrayElement = 0;
+		vVkDescriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+		vVkDescriptorWrites[3].descriptorCount = 1;
+		vVkDescriptorWrites[3].pImageInfo = &vkDescriptorBufferInfoRt;
+
+		// binding 4: TLAS
+		vVkDescriptorWrites[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		vVkDescriptorWrites[4].pNext = &vkAccelInfo; // hook AS info
+		vVkDescriptorWrites[4].dstSet = _vkDescriptorSets[i];
+		vVkDescriptorWrites[4].dstBinding = 4;
+		vVkDescriptorWrites[4].dstArrayElement = 0;
+		vVkDescriptorWrites[4].descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+		vVkDescriptorWrites[4].descriptorCount = 1;
+		vVkDescriptorWrites[4].pImageInfo = nullptr;
+		vVkDescriptorWrites[4].pBufferInfo = nullptr;
+		vVkDescriptorWrites[4].pTexelBufferView = nullptr;
+
+		// binding 5: RT Sample
+		vVkDescriptorWrites[5].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		vVkDescriptorWrites[5].pNext = nullptr; // hook AS info
+		vVkDescriptorWrites[5].dstSet = _vkDescriptorSets[i];
+		vVkDescriptorWrites[5].dstBinding = 8;
+		vVkDescriptorWrites[5].dstArrayElement = 0;
+		vVkDescriptorWrites[5].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		vVkDescriptorWrites[5].descriptorCount = 1;
+		vVkDescriptorWrites[5].pImageInfo = nullptr;
+		vVkDescriptorWrites[5].pBufferInfo = &vkDescriptorRTSamples;
+		vVkDescriptorWrites[5].pTexelBufferView = nullptr;
+
 
 		vkUpdateDescriptorSets(_vkDevice, static_cast<uint32_t>(vVkDescriptorWrites.size())
 			, vVkDescriptorWrites.data(), 0, nullptr);
@@ -1851,6 +3158,9 @@ void VulkanRenderer::createSyncObjects()
 	_vkImageAvailableSemaphores.resize(_MAX_FRAMES_IN_FLIGHT);
 	_vkInFlightFences.resize(_MAX_FRAMES_IN_FLIGHT);
 	_vkRenderFinishedSemaphores.resize(_vkSwapChainImages.size());
+
+	// one fence slot per swapchain image
+	_vkImagesInFlight.resize(_vkSwapChainImages.size(), VK_NULL_HANDLE);
 
 	VkSemaphoreCreateInfo vkSemaphoreInfo{};
 	vkSemaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -1901,4 +3211,1061 @@ void  VulkanRenderer::createSSBO()
 		_perDraw[i].capacity = _MAX_INDIRECT_DRAWS;
 	}
 
+}
+
+void VulkanRenderer::queryRayTracingProperties()
+{
+	VkPhysicalDeviceProperties2 props2{};
+	props2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+	props2.pNext = nullptr;
+
+	// Hook RT pipeline properties into the pNext chain
+	_vkRtPipelineProps.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR;
+	_vkRtPipelineProps.pNext = nullptr;
+
+	props2.pNext = &_vkRtPipelineProps;
+
+	vkGetPhysicalDeviceProperties2(_vkPhysicalDevice, &props2);
+	/*
+	std::cout
+		<< "RT props: handleSize=" << _vkRtPipelineProps.shaderGroupHandleSize
+		<< ", handleAlign=" << _vkRtPipelineProps.shaderGroupHandleAlignment
+		<< ", baseAlign=" << _vkRtPipelineProps.shaderGroupBaseAlignment
+		<< std::endl;
+	*/
+}
+
+void VulkanRenderer::createRayTracingSBT()
+{
+	// Destroy old SBT if any
+	if (_vkRtSbtBuffer != VK_NULL_HANDLE) {
+		vkDestroyBuffer(_vkDevice, _vkRtSbtBuffer, nullptr);
+		vkFreeMemory(_vkDevice, _vkRtSbtMemory, nullptr);
+		_vkRtSbtBuffer = VK_NULL_HANDLE;
+		_vkRtSbtMemory = VK_NULL_HANDLE;
+	}
+
+	// 0 = raygen
+	// 1 = radiance miss
+	// 2 = shadow miss
+	// 3 = radiance hit
+	// 4 = shadow hit
+
+	const uint32_t groupCount = 5;
+
+	const uint32_t handleSize = _vkRtPipelineProps.shaderGroupHandleSize;
+	const uint32_t baseAlign = _vkRtPipelineProps.shaderGroupBaseAlignment;
+
+	// Align record size to shaderGroupBaseAlignment
+	const uint32_t handleSizeAligned = (handleSize + baseAlign - 1) & ~(baseAlign - 1);
+
+	const uint32_t sbtSize = groupCount * handleSizeAligned;
+
+	// Get raw group handles
+	std::vector<uint8_t> handleStorage(groupCount * handleSize);
+
+	VkResult res = _vlRtGetRayTracingShaderGroupHandlesKHR_PFN(
+		_vkDevice,
+		_vkRtPipeline,
+		0,                         // firstGroup
+		groupCount,
+		static_cast<uint32_t>(handleStorage.size()),
+		handleStorage.data()
+	);
+
+	if (res != VK_SUCCESS) {
+		throw std::runtime_error("ERROR::VULKAN::RT::FAILED_TO_GET_SHADER_GROUP_HANDLES");
+	}
+
+	// Allocate SBT buffer
+	VkBufferUsageFlags usage =
+		VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR |
+		VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+
+	VkMemoryPropertyFlags memProps =
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+		VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
+	createBuffer(sbtSize, usage, memProps, _vkRtSbtBuffer, _vkRtSbtMemory);
+
+	// Fill SBT: one record per group, in order
+	uint8_t* pData = nullptr;
+	vkMapMemory(_vkDevice, _vkRtSbtMemory, 0, sbtSize, 0, reinterpret_cast<void**>(&pData));
+
+	for (uint32_t g = 0; g < groupCount; ++g) {
+		memcpy(
+			pData + g * handleSizeAligned,          // destination slot
+			handleStorage.data() + g * handleSize,  // source handle
+			handleSize
+		);
+	}
+
+	vkUnmapMemory(_vkDevice, _vkRtSbtMemory);
+
+	// Get SBT buffer device address
+	VkBufferDeviceAddressInfo addrInfo{};
+	addrInfo.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+	addrInfo.buffer = _vkRtSbtBuffer;
+
+	VkDeviceAddress sbtAddress = vkGetBufferDeviceAddress(_vkDevice, &addrInfo);
+
+	// Raygen table: group 0
+	_vkSbtRaygenRegion.deviceAddress = sbtAddress + 0 * handleSizeAligned;
+	_vkSbtRaygenRegion.stride = handleSizeAligned;
+	_vkSbtRaygenRegion.size = handleSizeAligned;
+
+	// Miss table: groups 1 (radiance miss) and 2 (shadow miss)
+	_vkSbtMissRegion.deviceAddress = sbtAddress + 1 * handleSizeAligned;
+	_vkSbtMissRegion.stride = handleSizeAligned;
+	_vkSbtMissRegion.size = 2 * handleSizeAligned;
+
+	// Hit table: groups 3 (radiance hit) and 4 (shadow hit)
+	_vkSbtHitRegion.deviceAddress = sbtAddress + 3 * handleSizeAligned;
+	_vkSbtHitRegion.stride = handleSizeAligned;
+	_vkSbtHitRegion.size = 2 * handleSizeAligned;
+
+	// No callables
+	_vkSbtCallableRegion.deviceAddress = 0;
+	_vkSbtCallableRegion.stride = 0;
+	_vkSbtCallableRegion.size = 0;
+}
+
+void VulkanRenderer::createRtCameraBuffers()
+{
+	VkDeviceSize bufferSize = sizeof(engine::vk::RtCameraUBO);
+
+	_vkRtCameraBuffers.resize(_MAX_FRAMES_IN_FLIGHT);
+	_vkRtCameraBuffersMemory.resize(_MAX_FRAMES_IN_FLIGHT);
+	_vkRtCameraBuffersMapped.resize(_MAX_FRAMES_IN_FLIGHT);
+
+	for (size_t i = 0; i < _MAX_FRAMES_IN_FLIGHT; ++i)
+	{
+		createBuffer(
+			bufferSize,
+			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+			VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+			_vkRtCameraBuffers[i],
+			_vkRtCameraBuffersMemory[i]
+		);
+
+		vkMapMemory(
+			_vkDevice,
+			_vkRtCameraBuffersMemory[i],
+			0,
+			bufferSize,
+			0,
+			&_vkRtCameraBuffersMapped[i]
+		);
+	}
+}
+
+void VulkanRenderer::submitRtCameraData(const engine::vk::RtCameraUBO& data)
+{
+	_rtCameraHost = data;
+}
+
+void VulkanRenderer::buildClusterBlases(const std::vector<engine::vk::RtClusterBuildInfo>& clusters)
+{
+	// Clear any previous cluster BLASes
+	for (auto& c : _rtClusterBlases)
+	{
+		if (c.blas != VK_NULL_HANDLE)
+		{
+			_vkDestroyAccelerationStructureKHR_PFN(_vkDevice, c.blas, nullptr);
+			c.blas = VK_NULL_HANDLE;
+		}
+		if (c.blasBuffer != VK_NULL_HANDLE)
+		{
+			vkDestroyBuffer(_vkDevice, c.blasBuffer, nullptr);
+			c.blasBuffer = VK_NULL_HANDLE;
+		}
+		if (c.blasMemory != VK_NULL_HANDLE)
+		{
+			vkFreeMemory(_vkDevice, c.blasMemory, nullptr);
+			c.blasMemory = VK_NULL_HANDLE;
+		}
+	}
+	_rtClusterBlases.clear();
+	_rtClusterBlases.reserve(clusters.size());
+
+	// Common: device addresses for global vertex/index buffers
+	VkBufferDeviceAddressInfo addrInfo{};
+	addrInfo.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+
+	addrInfo.buffer = _vkRtVertexBuffer;
+	VkDeviceAddress vertexAddress = vkGetBufferDeviceAddress(_vkDevice, &addrInfo);
+
+	addrInfo.buffer = _vkRtIndexBuffer;
+	VkDeviceAddress indexAddress = vkGetBufferDeviceAddress(_vkDevice, &addrInfo);
+
+	const uint32_t vertexCount =
+		static_cast<uint32_t>(_vkRtVertexCount); 
+
+	for (const auto& info : clusters)
+	{
+		const uint32_t firstIndex = info.firstIndex;
+		const uint32_t indexCount = info.indexCount;
+		const uint32_t primitiveCnt = indexCount / 3;
+
+		if (indexCount == 0 || primitiveCnt == 0)
+			continue;
+
+		// Triangle geometry for this cluster
+		VkAccelerationStructureGeometryTrianglesDataKHR triangles{};
+		triangles.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
+		triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
+		triangles.vertexData.deviceAddress = vertexAddress;
+		triangles.vertexStride = sizeof(engine::mesh::Vertex);
+		triangles.maxVertex = vertexCount;
+		triangles.indexType = VK_INDEX_TYPE_UINT32;
+		// shift indexData to the start of this clusters index range
+		triangles.indexData.deviceAddress = indexAddress + firstIndex * sizeof(uint32_t);
+		triangles.transformData.deviceAddress = 0;
+
+		VkAccelerationStructureGeometryKHR asGeom{};
+		asGeom.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+		asGeom.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
+		asGeom.flags = VK_GEOMETRY_OPAQUE_BIT_KHR;
+		asGeom.geometry.triangles = triangles;
+
+		VkAccelerationStructureBuildGeometryInfoKHR buildInfo{};
+		buildInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+		buildInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+		buildInfo.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+		buildInfo.geometryCount = 1;
+		buildInfo.pGeometries = &asGeom;
+
+		VkAccelerationStructureBuildSizesInfoKHR sizeInfo{};
+		sizeInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
+
+		uint32_t primitiveCountArray[1] = { primitiveCnt };
+
+		_vkGetAccelerationStructureBuildSizesKHR_PFN(
+			_vkDevice,
+			VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
+			&buildInfo,
+			primitiveCountArray,
+			&sizeInfo);
+
+		// Allocate buffer for this BLAS
+		engine::vk::RtClusterBlas clusterBlas{};
+		clusterBlas.firstIndex = firstIndex;
+		clusterBlas.indexCount = indexCount;
+		clusterBlas.clusterId = info.clusterId;
+
+		VkBufferCreateInfo bufInfo{};
+		bufInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		bufInfo.size = sizeInfo.accelerationStructureSize;
+		bufInfo.usage = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR |
+			VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+		bufInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+		if (vkCreateBuffer(_vkDevice, &bufInfo, nullptr, &clusterBlas.blasBuffer) != VK_SUCCESS)
+		{
+			std::cerr << "buildClusterBlases: Failed to create BLAS buffer\n";
+			continue;
+		}
+
+		VkMemoryRequirements memReq{};
+		vkGetBufferMemoryRequirements(_vkDevice, clusterBlas.blasBuffer, &memReq);
+
+		VkMemoryAllocateFlagsInfo allocFlags{};
+		allocFlags.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO;
+		allocFlags.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT_KHR;
+
+		VkMemoryAllocateInfo allocInfo{};
+		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+		allocInfo.pNext = &allocFlags;
+		allocInfo.allocationSize = memReq.size;
+		allocInfo.memoryTypeIndex = getMemoryType(
+			memReq.memoryTypeBits,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+		if (vkAllocateMemory(_vkDevice, &allocInfo, nullptr, &clusterBlas.blasMemory) != VK_SUCCESS)
+		{
+			std::cerr << "buildClusterBlases: Failed to allocate BLAS memory\n";
+			vkDestroyBuffer(_vkDevice, clusterBlas.blasBuffer, nullptr);
+			continue;
+		}
+
+		vkBindBufferMemory(_vkDevice, clusterBlas.blasBuffer, clusterBlas.blasMemory, 0);
+
+		//Create the acceleration structure object
+		VkAccelerationStructureCreateInfoKHR asCreateInfo{};
+		asCreateInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
+		asCreateInfo.buffer = clusterBlas.blasBuffer;
+		asCreateInfo.size = sizeInfo.accelerationStructureSize;
+		asCreateInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+
+		if (_vkCreateAccelerationStructureKHR_PFN(
+			_vkDevice,
+			&asCreateInfo,
+			nullptr,
+			&clusterBlas.blas) != VK_SUCCESS)
+		{
+			std::cerr << "buildClusterBlases: Failed to create BLAS handle\n";
+			vkDestroyBuffer(_vkDevice, clusterBlas.blasBuffer, nullptr);
+			vkFreeMemory(_vkDevice, clusterBlas.blasMemory, nullptr);
+			continue;
+		}
+
+		//Scratch buffer for this BLAS build
+		VkBuffer scratchBuffer;
+		VkDeviceMemory scratchMemory;
+		createBuffer(
+			sizeInfo.buildScratchSize,
+			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+			VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			scratchBuffer,
+			scratchMemory);
+
+		addrInfo.buffer = scratchBuffer;
+		VkDeviceAddress scratchAddress = vkGetBufferDeviceAddress(_vkDevice, &addrInfo);
+
+		buildInfo.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
+		buildInfo.dstAccelerationStructure = clusterBlas.blas;
+		buildInfo.scratchData.deviceAddress = scratchAddress;
+
+		VkAccelerationStructureBuildRangeInfoKHR rangeInfo{};
+		rangeInfo.primitiveCount = primitiveCnt;
+		rangeInfo.primitiveOffset = 0;
+		rangeInfo.firstVertex = 0;
+		rangeInfo.transformOffset = 0;
+
+		VkAccelerationStructureBuildRangeInfoKHR* pRangeInfo = &rangeInfo;
+
+		VkCommandBuffer cmd = beginSingleTimeCommands();
+		_vkCmdBuildAccelerationStructuresKHR_PFN(
+			cmd,
+			1,
+			&buildInfo,
+			&pRangeInfo);
+		endSingleTimeCommands(cmd);
+
+		// Destroy scratch
+		vkDestroyBuffer(_vkDevice, scratchBuffer, nullptr);
+		vkFreeMemory(_vkDevice, scratchMemory, nullptr);
+
+		//Get device address for this BLAS
+		VkAccelerationStructureDeviceAddressInfoKHR addrAs{};
+		addrAs.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
+		addrAs.accelerationStructure = clusterBlas.blas;
+
+		clusterBlas.deviceAddress =
+			_vkGetAccelerationStructureDeviceAddressKHR_PFN(_vkDevice, &addrAs);
+
+		_rtClusterBlases.push_back(clusterBlas);
+	}
+
+	//std::cout << "buildClusterBlases: built " << _rtClusterBlases.size() << " cluster BLASes\n";
+}
+
+void VulkanRenderer::buildClusterTlasAll()
+{
+	if (_rtClusterBlases.empty())
+	{
+		std::cerr << "buildClusterTlasAll: no cluster BLASes, skipping TLAS build\n";
+		return;
+	}
+
+	// Make sure previous cluster TLAS is gone
+	if (_vkClusterTlas != VK_NULL_HANDLE)
+	{
+		_vkDestroyAccelerationStructureKHR_PFN(_vkDevice, _vkClusterTlas, nullptr);
+		_vkClusterTlas = VK_NULL_HANDLE;
+	}
+	if (_vkClusterTlasBuffer != VK_NULL_HANDLE)
+	{
+		vkDestroyBuffer(_vkDevice, _vkClusterTlasBuffer, nullptr);
+		_vkClusterTlasBuffer = VK_NULL_HANDLE;
+	}
+	if (_vkClusterTlasMemory != VK_NULL_HANDLE)
+	{
+		vkFreeMemory(_vkDevice, _vkClusterTlasMemory, nullptr);
+		_vkClusterTlasMemory = VK_NULL_HANDLE;
+	}
+
+	//Build instance array on CPU
+	std::vector<VkAccelerationStructureInstanceKHR> instances;
+	instances.reserve(_rtClusterBlases.size());
+
+	for (uint32_t i = 0; i < _rtClusterBlases.size(); ++i)
+	{
+		const auto& cb = _rtClusterBlases[i];
+		if (cb.blas == VK_NULL_HANDLE || cb.deviceAddress == 0)
+			continue;
+
+		VkAccelerationStructureInstanceKHR inst{};
+		// identity transform
+		inst.transform.matrix[0][0] = 1.0f;
+		inst.transform.matrix[0][1] = 0;
+		inst.transform.matrix[0][2] = 0;
+		inst.transform.matrix[0][3] = 0;
+
+		inst.transform.matrix[1][0] = 0;
+		inst.transform.matrix[1][1] = 1.0f;
+		inst.transform.matrix[1][2] = 0;
+		inst.transform.matrix[1][3] = 0;
+
+		inst.transform.matrix[2][0] = 0;
+		inst.transform.matrix[2][1] = 0;
+		inst.transform.matrix[2][2] = 1.0f;
+		inst.transform.matrix[2][3] = 0;
+
+		inst.instanceCustomIndex = i;  // index into _rtClusterBlases / future per-instance data
+		inst.mask = 0xFF;
+		inst.instanceShaderBindingTableRecordOffset = 0;
+		inst.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+		inst.accelerationStructureReference = cb.deviceAddress;
+
+		instances.push_back(inst);
+	}
+
+	const uint32_t instanceCount = static_cast<uint32_t>(instances.size());
+	if (instanceCount == 0)
+	{
+		std::cerr << "buildClusterTlasAll: no valid instances, skipping\n";
+		return;
+	}
+
+	//Upload instances to a GPU buffer with device address
+	VkDeviceSize instancesSize = sizeof(VkAccelerationStructureInstanceKHR) * instanceCount;
+
+	VkBuffer instancesBuffer;
+	VkDeviceMemory instancesMemory;
+	createBuffer(
+		instancesSize,
+		VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
+		VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		instancesBuffer,
+		instancesMemory);
+
+	// Map & copy
+	void* data = nullptr;
+	vkMapMemory(_vkDevice, instancesMemory, 0, instancesSize, 0, &data);
+	std::memcpy(data, instances.data(), static_cast<size_t>(instancesSize));
+	vkUnmapMemory(_vkDevice, instancesMemory);
+
+	// Get device address for instancesBuffer
+	VkBufferDeviceAddressInfo addrInfo{};
+	addrInfo.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+	addrInfo.buffer = instancesBuffer;
+
+	VkDeviceAddress instancesAddress = vkGetBufferDeviceAddress(_vkDevice, &addrInfo);
+
+	//Describe TLAS geometry (instances)
+	VkAccelerationStructureGeometryInstancesDataKHR instancesData{};
+	instancesData.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
+	instancesData.arrayOfPointers = VK_FALSE;
+	instancesData.data.deviceAddress = instancesAddress;
+
+	VkAccelerationStructureGeometryKHR asGeom{};
+	asGeom.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+	asGeom.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR;
+	asGeom.geometry.instances = instancesData;
+
+	VkAccelerationStructureBuildGeometryInfoKHR buildInfo{};
+	buildInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+	buildInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
+	buildInfo.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+	buildInfo.geometryCount = 1;
+	buildInfo.pGeometries = &asGeom;
+
+	VkAccelerationStructureBuildSizesInfoKHR sizeInfo{};
+	sizeInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
+
+	uint32_t primCountArray[1] = { instanceCount };
+
+	_vkGetAccelerationStructureBuildSizesKHR_PFN(
+		_vkDevice,
+		VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
+		&buildInfo,
+		primCountArray,
+		&sizeInfo);
+
+	//Allocate buffer + memory for TLAS
+	VkBufferCreateInfo bufInfo{};
+	bufInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	bufInfo.size = sizeInfo.accelerationStructureSize;
+	bufInfo.usage = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR |
+		VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+	bufInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+	if (vkCreateBuffer(_vkDevice, &bufInfo, nullptr, &_vkClusterTlasBuffer) != VK_SUCCESS)
+	{
+		std::cerr << "buildClusterTlasAll: Failed to create TLAS buffer\n";
+		vkDestroyBuffer(_vkDevice, instancesBuffer, nullptr);
+		vkFreeMemory(_vkDevice, instancesMemory, nullptr);
+		return;
+	}
+
+	VkMemoryRequirements memReq{};
+	vkGetBufferMemoryRequirements(_vkDevice, _vkClusterTlasBuffer, &memReq);
+
+	VkMemoryAllocateFlagsInfo allocFlags{};
+	allocFlags.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO;
+	allocFlags.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT_KHR;
+
+	VkMemoryAllocateInfo allocInfo{};
+	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	allocInfo.pNext = &allocFlags;
+	allocInfo.allocationSize = memReq.size;
+	allocInfo.memoryTypeIndex = getMemoryType(
+		memReq.memoryTypeBits,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+	if (vkAllocateMemory(_vkDevice, &allocInfo, nullptr, &_vkClusterTlasMemory) != VK_SUCCESS)
+	{
+		std::cerr << "buildClusterTlasAll: Failed to allocate TLAS memory\n";
+		vkDestroyBuffer(_vkDevice, _vkClusterTlasBuffer, nullptr);
+		_vkClusterTlasBuffer = VK_NULL_HANDLE;
+
+		vkDestroyBuffer(_vkDevice, instancesBuffer, nullptr);
+		vkFreeMemory(_vkDevice, instancesMemory, nullptr);
+		return;
+	}
+
+	vkBindBufferMemory(_vkDevice, _vkClusterTlasBuffer, _vkClusterTlasMemory, 0);
+
+	//Create TLAS handle
+	VkAccelerationStructureCreateInfoKHR asCreateInfo{};
+	asCreateInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
+	asCreateInfo.buffer = _vkClusterTlasBuffer;
+	asCreateInfo.size = sizeInfo.accelerationStructureSize;
+	asCreateInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
+
+	if (_vkCreateAccelerationStructureKHR_PFN(
+		_vkDevice,
+		&asCreateInfo,
+		nullptr,
+		&_vkClusterTlas) != VK_SUCCESS)
+	{
+		std::cerr << "buildClusterTlasAll: Failed to create TLAS handle\n";
+		vkDestroyBuffer(_vkDevice, _vkClusterTlasBuffer, nullptr);
+		vkFreeMemory(_vkDevice, _vkClusterTlasMemory, nullptr);
+		_vkClusterTlasBuffer = VK_NULL_HANDLE;
+		_vkClusterTlasMemory = VK_NULL_HANDLE;
+
+		vkDestroyBuffer(_vkDevice, instancesBuffer, nullptr);
+		vkFreeMemory(_vkDevice, instancesMemory, nullptr);
+		return;
+	}
+
+	//Scratch buffer + build
+	VkBuffer scratchBuffer;
+	VkDeviceMemory scratchMemory;
+	createBuffer(
+		sizeInfo.buildScratchSize,
+		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+		VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		scratchBuffer,
+		scratchMemory);
+
+	addrInfo.buffer = scratchBuffer;
+	VkDeviceAddress scratchAddress = vkGetBufferDeviceAddress(_vkDevice, &addrInfo);
+
+	buildInfo.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
+	buildInfo.dstAccelerationStructure = _vkClusterTlas;
+	buildInfo.scratchData.deviceAddress = scratchAddress;
+
+	VkAccelerationStructureBuildRangeInfoKHR rangeInfo{};
+	rangeInfo.primitiveCount = instanceCount;
+	rangeInfo.primitiveOffset = 0;
+	rangeInfo.firstVertex = 0;
+	rangeInfo.transformOffset = 0;
+
+	VkAccelerationStructureBuildRangeInfoKHR* pRangeInfo = &rangeInfo;
+
+	VkCommandBuffer cmd = beginSingleTimeCommands();
+	_vkCmdBuildAccelerationStructuresKHR_PFN(
+		cmd,
+		1,
+		&buildInfo,
+		&pRangeInfo);
+	endSingleTimeCommands(cmd);
+
+	// Clean up scratch + instances buffer
+	vkDestroyBuffer(_vkDevice, scratchBuffer, nullptr);
+	vkFreeMemory(_vkDevice, scratchMemory, nullptr);
+
+	vkDestroyBuffer(_vkDevice, instancesBuffer, nullptr);
+	vkFreeMemory(_vkDevice, instancesMemory, nullptr);
+
+	//Create per-instance RtInstanceData buffer for all clusters
+	if (_vkRtInstanceBuffer != VK_NULL_HANDLE)
+	{
+		vkDestroyBuffer(_vkDevice, _vkRtInstanceBuffer, nullptr);
+		_vkRtInstanceBuffer = VK_NULL_HANDLE;
+	}
+	if (_vkRtInstanceBufferMemory != VK_NULL_HANDLE)
+	{
+		vkFreeMemory(_vkDevice, _vkRtInstanceBufferMemory, nullptr);
+		_vkRtInstanceBufferMemory = VK_NULL_HANDLE;
+	}
+
+	const size_t rtInstanceCount = _rtClusterBlases.size();
+	if (rtInstanceCount == 0)
+	{
+		std::cerr << "buildClusterTlasAll: no cluster BLASes for instance data\n";
+		return;
+	}
+
+	VkDeviceSize rtInstSize =
+		static_cast<VkDeviceSize>(rtInstanceCount * sizeof(engine::vk::RtInstanceData));
+
+	createBuffer(
+		rtInstSize,
+		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		_vkRtInstanceBuffer,
+		_vkRtInstanceBufferMemory);
+
+	// Fill per-instance data
+	engine::vk::RtInstanceData* instCpuPtr = nullptr;
+	vkMapMemory(
+		_vkDevice,
+		_vkRtInstanceBufferMemory,
+		0,
+		rtInstSize,
+		0,
+		reinterpret_cast<void**>(&instCpuPtr));
+
+	for (size_t i = 0; i < rtInstanceCount; ++i)
+	{
+		const auto& cb = _rtClusterBlases[i];
+		instCpuPtr[i].baseIndex = cb.firstIndex;   // slice into global index buffer
+		instCpuPtr[i].clusterId = cb.clusterId;    // for debugging / future use
+		instCpuPtr[i].lodLevel = 0;               // optional: make LOD-aware later
+		instCpuPtr[i].renderMode = 0;
+	}
+
+	vkUnmapMemory(_vkDevice, _vkRtInstanceBufferMemory);
+
+	// Update descriptors 4/5/6/7 to use _vkClusterTlas and per-instance buffer
+	VkWriteDescriptorSetAccelerationStructureKHR accelInfo{};
+	accelInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR;
+	accelInfo.accelerationStructureCount = 1;
+	accelInfo.pAccelerationStructures = &_vkClusterTlas;
+
+	VkDescriptorBufferInfo vertexSsboInfo{};
+	vertexSsboInfo.buffer = _vkRtVertexBuffer;
+	vertexSsboInfo.offset = 0;
+	vertexSsboInfo.range = VK_WHOLE_SIZE;
+
+	VkDescriptorBufferInfo indexSsboInfo{};
+	indexSsboInfo.buffer = _vkRtIndexBuffer;
+	indexSsboInfo.offset = 0;
+	indexSsboInfo.range = VK_WHOLE_SIZE;
+
+	VkDescriptorBufferInfo instanceSsboInfo{};
+	instanceSsboInfo.buffer = _vkRtInstanceBuffer;
+	instanceSsboInfo.offset = 0;
+	instanceSsboInfo.range = VK_WHOLE_SIZE;
+
+	for (size_t i = 0; i < _MAX_FRAMES_IN_FLIGHT; ++i)
+	{
+		std::array<VkWriteDescriptorSet, 4> writes{};
+
+		// binding 4: TLAS
+		writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writes[0].pNext = &accelInfo;
+		writes[0].dstSet = _vkDescriptorSets[i];
+		writes[0].dstBinding = 4;
+		writes[0].dstArrayElement = 0;
+		writes[0].descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+		writes[0].descriptorCount = 1;
+
+		// binding 5: vertex SSBO
+		writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writes[1].dstSet = _vkDescriptorSets[i];
+		writes[1].dstBinding = 5;
+		writes[1].dstArrayElement = 0;
+		writes[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		writes[1].descriptorCount = 1;
+		writes[1].pBufferInfo = &vertexSsboInfo;
+
+		// binding 6: index SSBO
+		writes[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writes[2].dstSet = _vkDescriptorSets[i];
+		writes[2].dstBinding = 6;
+		writes[2].dstArrayElement = 0;
+		writes[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		writes[2].descriptorCount = 1;
+		writes[2].pBufferInfo = &indexSsboInfo;
+
+		// binding 7: per-instance data SSBO
+		writes[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writes[3].dstSet = _vkDescriptorSets[i];
+		writes[3].dstBinding = 7;
+		writes[3].dstArrayElement = 0;
+		writes[3].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		writes[3].descriptorCount = 1;
+		writes[3].pBufferInfo = &instanceSsboInfo;
+
+		vkUpdateDescriptorSets(
+			_vkDevice,
+			static_cast<uint32_t>(writes.size()),
+			writes.data(),
+			0,
+			nullptr);
+	}
+
+	//std::cout << "buildClusterTlasAll: built TLAS with " << instanceCount << " instances\n";
+
+}
+
+void VulkanRenderer::buildClusterTlasVisible(const std::vector<engineID_t>& visibleClusters, uint32_t renderMode)
+{
+	// For correctness while experimenting: make sure GPU isnt using the old TLAS
+	vkDeviceWaitIdle(_vkDevice);
+
+	// Destroy previous cluster TLAS
+	if (_vkClusterTlas != VK_NULL_HANDLE)
+	{
+		_vkDestroyAccelerationStructureKHR_PFN(_vkDevice, _vkClusterTlas, nullptr);
+		_vkClusterTlas = VK_NULL_HANDLE;
+	}
+	if (_vkClusterTlasBuffer != VK_NULL_HANDLE)
+	{
+		vkDestroyBuffer(_vkDevice, _vkClusterTlasBuffer, nullptr);
+		_vkClusterTlasBuffer = VK_NULL_HANDLE;
+	}
+	if (_vkClusterTlasMemory != VK_NULL_HANDLE)
+	{
+		vkFreeMemory(_vkDevice, _vkClusterTlasMemory, nullptr);
+		_vkClusterTlasMemory = VK_NULL_HANDLE;
+	}
+
+	// Build TLAS instances only for the visible clusters
+	std::vector<VkAccelerationStructureInstanceKHR> instances;
+	instances.reserve(visibleClusters.size());
+
+	// Parallel array of which BLAS each instance refers to
+	std::vector<const engine::vk::RtClusterBlas*> usedBlases;
+	usedBlases.reserve(visibleClusters.size());
+
+	for (engineID_t cid : visibleClusters)
+	{
+		// Find matching BLAS for this clusterId (simple linear search for now)
+		const engine::vk::RtClusterBlas* found = nullptr;
+		for (const auto& cb : _rtClusterBlases)
+		{
+			if (cb.clusterId == cid)
+			{
+				found = &cb;
+				break;
+			}
+		}
+
+		if (!found || found->blas == VK_NULL_HANDLE || found->deviceAddress == 0)
+			continue;
+
+		usedBlases.push_back(found);
+
+		VkAccelerationStructureInstanceKHR inst{};
+		// identity transform
+		inst.transform.matrix[0][0] = 1.0f;
+		inst.transform.matrix[0][1] = 0.0f;
+		inst.transform.matrix[0][2] = 0.0f;
+		inst.transform.matrix[0][3] = 0.0f;
+
+		inst.transform.matrix[1][0] = 0.0f;
+		inst.transform.matrix[1][1] = 1.0f;
+		inst.transform.matrix[1][2] = 0.0f;
+		inst.transform.matrix[1][3] = 0.0f;
+
+		inst.transform.matrix[2][0] = 0.0f;
+		inst.transform.matrix[2][1] = 0.0f;
+		inst.transform.matrix[2][2] = 1.0f;
+		inst.transform.matrix[2][3] = 0.0f;
+
+		uint32_t instIndex = static_cast<uint32_t>(usedBlases.size() - 1);
+		inst.instanceCustomIndex = instIndex;  // matches rtInstances[instIndex]
+		inst.mask = 0xFF;
+		inst.instanceShaderBindingTableRecordOffset = 0;
+		inst.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+		inst.accelerationStructureReference = found->deviceAddress;
+
+		instances.push_back(inst);
+	}
+
+	const uint32_t instanceCount = static_cast<uint32_t>(instances.size());
+	if (instanceCount == 0)
+	{
+		std::cerr << "buildClusterTlasVisible: no valid instances after filtering\n";
+		return;
+	}
+
+	//Upload instances to a GPU buffer
+	VkDeviceSize instancesSize =
+		sizeof(VkAccelerationStructureInstanceKHR) * instanceCount;
+
+	VkBuffer instancesBuffer;
+	VkDeviceMemory instancesMemory;
+	createBuffer(
+		instancesSize,
+		VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
+		VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		instancesBuffer,
+		instancesMemory);
+
+	void* data = nullptr;
+	vkMapMemory(_vkDevice, instancesMemory, 0, instancesSize, 0, &data);
+	std::memcpy(data, instances.data(), static_cast<size_t>(instancesSize));
+	vkUnmapMemory(_vkDevice, instancesMemory);
+
+	// Device address for instances
+	VkBufferDeviceAddressInfo addrInfo{};
+	addrInfo.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+	addrInfo.buffer = instancesBuffer;
+	VkDeviceAddress instancesAddress = vkGetBufferDeviceAddress(_vkDevice, &addrInfo);
+
+	//TLAS geometry description
+	VkAccelerationStructureGeometryInstancesDataKHR instancesData{};
+	instancesData.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
+	instancesData.arrayOfPointers = VK_FALSE;
+	instancesData.data.deviceAddress = instancesAddress;
+
+	VkAccelerationStructureGeometryKHR asGeom{};
+	asGeom.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+	asGeom.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR;
+	asGeom.geometry.instances = instancesData;
+
+	VkAccelerationStructureBuildGeometryInfoKHR buildInfo{};
+	buildInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+	buildInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
+	buildInfo.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+	buildInfo.geometryCount = 1;
+	buildInfo.pGeometries = &asGeom;
+
+	VkAccelerationStructureBuildSizesInfoKHR sizeInfo{};
+	sizeInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
+
+	uint32_t primCountArray[1] = { instanceCount };
+
+	_vkGetAccelerationStructureBuildSizesKHR_PFN(
+		_vkDevice,
+		VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
+		&buildInfo,
+		primCountArray,
+		&sizeInfo);
+
+	//Allocate TLAS buffer + memory
+	VkBufferCreateInfo bufInfo{};
+	bufInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	bufInfo.size = sizeInfo.accelerationStructureSize;
+	bufInfo.usage = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR |
+		VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+	bufInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+	if (vkCreateBuffer(_vkDevice, &bufInfo, nullptr, &_vkClusterTlasBuffer) != VK_SUCCESS)
+	{
+		std::cerr << "buildClusterTlasVisible: Failed to create TLAS buffer\n";
+		vkDestroyBuffer(_vkDevice, instancesBuffer, nullptr);
+		vkFreeMemory(_vkDevice, instancesMemory, nullptr);
+		return;
+	}
+
+	VkMemoryRequirements memReq{};
+	vkGetBufferMemoryRequirements(_vkDevice, _vkClusterTlasBuffer, &memReq);
+
+	VkMemoryAllocateFlagsInfo allocFlags{};
+	allocFlags.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO;
+	allocFlags.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT_KHR;
+
+	VkMemoryAllocateInfo allocInfo{};
+	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	allocInfo.pNext = &allocFlags;
+	allocInfo.allocationSize = memReq.size;
+	allocInfo.memoryTypeIndex = getMemoryType(
+		memReq.memoryTypeBits,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+	if (vkAllocateMemory(_vkDevice, &allocInfo, nullptr, &_vkClusterTlasMemory) != VK_SUCCESS)
+	{
+		std::cerr << "buildClusterTlasVisible: Failed to allocate TLAS memory\n";
+		vkDestroyBuffer(_vkDevice, _vkClusterTlasBuffer, nullptr);
+		_vkClusterTlasBuffer = VK_NULL_HANDLE;
+
+		vkDestroyBuffer(_vkDevice, instancesBuffer, nullptr);
+		vkFreeMemory(_vkDevice, instancesMemory, nullptr);
+		return;
+	}
+
+	vkBindBufferMemory(_vkDevice, _vkClusterTlasBuffer, _vkClusterTlasMemory, 0);
+
+	//Create TLAS handle
+	VkAccelerationStructureCreateInfoKHR asCreateInfo{};
+	asCreateInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
+	asCreateInfo.buffer = _vkClusterTlasBuffer;
+	asCreateInfo.size = sizeInfo.accelerationStructureSize;
+	asCreateInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
+
+	if (_vkCreateAccelerationStructureKHR_PFN(
+		_vkDevice,
+		&asCreateInfo,
+		nullptr,
+		&_vkClusterTlas) != VK_SUCCESS)
+	{
+		std::cerr << "buildClusterTlasVisible: Failed to create TLAS handle\n";
+		vkDestroyBuffer(_vkDevice, _vkClusterTlasBuffer, nullptr);
+		vkFreeMemory(_vkDevice, _vkClusterTlasMemory, nullptr);
+		_vkClusterTlasBuffer = VK_NULL_HANDLE;
+		_vkClusterTlasMemory = VK_NULL_HANDLE;
+
+		vkDestroyBuffer(_vkDevice, instancesBuffer, nullptr);
+		vkFreeMemory(_vkDevice, instancesMemory, nullptr);
+		return;
+	}
+
+	//Scratch buffer + TLAS build
+	VkBuffer scratchBuffer;
+	VkDeviceMemory scratchMemory;
+	createBuffer(
+		sizeInfo.buildScratchSize,
+		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+		VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		scratchBuffer,
+		scratchMemory);
+
+	addrInfo.buffer = scratchBuffer;
+	VkDeviceAddress scratchAddress = vkGetBufferDeviceAddress(_vkDevice, &addrInfo);
+
+	buildInfo.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
+	buildInfo.dstAccelerationStructure = _vkClusterTlas;
+	buildInfo.scratchData.deviceAddress = scratchAddress;
+
+	VkAccelerationStructureBuildRangeInfoKHR rangeInfo{};
+	rangeInfo.primitiveCount = instanceCount;
+	rangeInfo.primitiveOffset = 0;
+	rangeInfo.firstVertex = 0;
+	rangeInfo.transformOffset = 0;
+
+	VkAccelerationStructureBuildRangeInfoKHR* pRangeInfo = &rangeInfo;
+
+	VkCommandBuffer cmd = beginSingleTimeCommands();
+	_vkCmdBuildAccelerationStructuresKHR_PFN(
+		cmd,
+		1,
+		&buildInfo,
+		&pRangeInfo);
+	endSingleTimeCommands(cmd);
+
+	// Destroy scratch + instance buffer
+	vkDestroyBuffer(_vkDevice, scratchBuffer, nullptr);
+	vkFreeMemory(_vkDevice, scratchMemory, nullptr);
+
+	vkDestroyBuffer(_vkDevice, instancesBuffer, nullptr);
+	vkFreeMemory(_vkDevice, instancesMemory, nullptr);
+
+	//Build per-instance RtInstanceData in the same order as usedBlases
+	if (_vkRtInstanceBuffer != VK_NULL_HANDLE)
+	{
+		vkDestroyBuffer(_vkDevice, _vkRtInstanceBuffer, nullptr);
+		_vkRtInstanceBuffer = VK_NULL_HANDLE;
+	}
+	if (_vkRtInstanceBufferMemory != VK_NULL_HANDLE)
+	{
+		vkFreeMemory(_vkDevice, _vkRtInstanceBufferMemory, nullptr);
+		_vkRtInstanceBufferMemory = VK_NULL_HANDLE;
+	}
+
+	const size_t rtInstanceCount = usedBlases.size();
+	VkDeviceSize rtInstSize =
+		static_cast<VkDeviceSize>(rtInstanceCount * sizeof(engine::vk::RtInstanceData));
+
+	createBuffer(
+		rtInstSize,
+		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		_vkRtInstanceBuffer,
+		_vkRtInstanceBufferMemory);
+
+	engine::vk::RtInstanceData* instCpuPtr = nullptr;
+
+	vkMapMemory(
+		_vkDevice,
+		_vkRtInstanceBufferMemory,
+		0,
+		rtInstSize,
+		0,
+		reinterpret_cast<void**>(&instCpuPtr));
+
+	for (size_t i = 0; i < rtInstanceCount; ++i)
+	{
+		const auto* cb = usedBlases[i];
+		instCpuPtr[i].baseIndex = cb->firstIndex;
+		instCpuPtr[i].clusterId = cb->clusterId;
+		instCpuPtr[i].lodLevel = 0; // optional 
+		instCpuPtr[i].renderMode = renderMode;
+	}
+
+	vkUnmapMemory(_vkDevice, _vkRtInstanceBufferMemory);
+
+	VkWriteDescriptorSetAccelerationStructureKHR accelInfo{};
+	accelInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR;
+	accelInfo.accelerationStructureCount = 1;
+	accelInfo.pAccelerationStructures = &_vkClusterTlas;
+
+	VkDescriptorBufferInfo vertexSsboInfo{};
+	vertexSsboInfo.buffer = _vkRtVertexBuffer;
+	vertexSsboInfo.offset = 0;
+	vertexSsboInfo.range = VK_WHOLE_SIZE;
+
+	VkDescriptorBufferInfo indexSsboInfo{};
+	indexSsboInfo.buffer = _vkRtIndexBuffer;
+	indexSsboInfo.offset = 0;
+	indexSsboInfo.range = VK_WHOLE_SIZE;
+
+	VkDescriptorBufferInfo instanceSsboInfo{};
+	instanceSsboInfo.buffer = _vkRtInstanceBuffer;
+	instanceSsboInfo.offset = 0;
+	instanceSsboInfo.range = VK_WHOLE_SIZE;
+
+
+	for (size_t i = 0; i < _MAX_FRAMES_IN_FLIGHT; ++i)
+	{
+		std::array<VkWriteDescriptorSet, 4> writes{};
+
+		writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writes[0].pNext = &accelInfo;
+		writes[0].dstSet = _vkDescriptorSets[i];
+		writes[0].dstBinding = 4;
+		writes[0].descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+		writes[0].descriptorCount = 1;
+
+		writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writes[1].dstSet = _vkDescriptorSets[i];
+		writes[1].dstBinding = 5;
+		writes[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		writes[1].descriptorCount = 1;
+		writes[1].pBufferInfo = &vertexSsboInfo;
+
+		writes[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writes[2].dstSet = _vkDescriptorSets[i];
+		writes[2].dstBinding = 6;
+		writes[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		writes[2].descriptorCount = 1;
+		writes[2].pBufferInfo = &indexSsboInfo;
+
+		writes[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		writes[3].dstSet = _vkDescriptorSets[i];
+		writes[3].dstBinding = 7;
+		writes[3].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		writes[3].descriptorCount = 1;
+		writes[3].pBufferInfo = &instanceSsboInfo;
+
+		vkUpdateDescriptorSets(
+			_vkDevice,
+			static_cast<uint32_t>(writes.size()),
+			writes.data(),
+			0,
+			nullptr);
+	}
 }

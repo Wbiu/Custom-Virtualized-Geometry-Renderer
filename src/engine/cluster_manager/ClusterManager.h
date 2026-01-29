@@ -50,7 +50,7 @@ public:
 	void cullClusters(engine::math::Mat4f& modelMat);
 	void setfrustumPlanesAndCamPos(engine::utils::array<engine::math::Vec4f, 6>& planes,engine::math::Vec4f& camPos);
 	int getIntersectedClusterCnt();
-	int getSelectedClusterCnt() { return _currentVisibleClusters.size(); };
+	int getvisibleClusterCnt() { return _currentVisibleClusters.size(); };
 	std::unordered_set<engineID_t>& getClustersToDraw() { return _currentVisibleClusters; };
 	engine::cluster::Cluster* getCluster(engineID_t cid) { return _lodMeshTree.clusters.at(cid); };
 };

@@ -1,15 +1,3 @@
-// SPDX-License-Identifier: MIT
-/*
-===============================================================================
- Custom-Virtualized-Geometry-Renderer — App.cpp
--------------------------------------------------------------------------------
- Academic/experimental prototype inspired by UE5 Nanite.
- Not production-ready. Provided “AS IS”, without warranties or conditions.
- See README.md for context and LICENSE for terms.
- Source: https://github.com/Wbiu/Custom-Virtualized-Geometry-Renderer
-===============================================================================
-*/
-
 #pragma once
 #include <chrono>
 #include <thread>
@@ -42,6 +30,8 @@ private:
 
 	Camera* _camera = nullptr;
 
+	bool _rtUploaded = false;   
+
 	std::vector<engine::mesh::ClusterDrawRange> _drawList;
 
 	engine::std_::EngineResourcePool _resourcePool;
@@ -50,6 +40,12 @@ private:
 	ClusterManager* _clusterManager = nullptr;
 	Threading* _thread = nullptr;
 	engine::mesh::LinearizedModelData* _linearizedData;
+
+	std::vector<unsigned int> _rtIndices;
+	
+
+	std::vector<engine::vk::RtClusterBuildInfo> _rtClusterInfos;
+
 	// end vars
 
 
@@ -59,7 +55,7 @@ private:
 	void initEngine();
 	void initRenderer();
 	void initCamera();
-	std::function<void(const char*)>  meshPrecessingHandler();
+	std::function<void(const char*)>  meshProcessingHandler();
 	void initGUI();
 	std::chrono::steady_clock::duration target_period_from_fps(double fps);
 	void cleanup();

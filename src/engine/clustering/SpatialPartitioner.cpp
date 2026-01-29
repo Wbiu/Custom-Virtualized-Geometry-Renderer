@@ -773,7 +773,7 @@ void SpatialPartitioner::intersectionValidation_V2(engine::cluster::Cluster* clu
 #endif
 }
 
-  void SpatialPartitioner::buildGlobalTriAABBSoA(const std::vector<engineID_t>& allPrimIds,
+ void SpatialPartitioner::buildGlobalTriAABBSoA(const std::vector<engineID_t>& allPrimIds,
      const engine::cluster::ClusterPools& pools, engine::cluster::HierarchyLevel level)
  {
      const size_t N = allPrimIds.size();
@@ -817,8 +817,7 @@ bool SpatialPartitioner::triBoxOverlap(const engine::mesh::Primitive* prim, cons
     const Vec3f v1 = Vec3f{ _clusterPools.vertexPool.at(prim->vertices[1])->coords.x,_clusterPools.vertexPool.at(prim->vertices[1])->coords.y,_clusterPools.vertexPool.at(prim->vertices[1])->coords.z } - c;
     const Vec3f v2 = Vec3f{ _clusterPools.vertexPool.at(prim->vertices[2])->coords.x,_clusterPools.vertexPool.at(prim->vertices[2])->coords.y,_clusterPools.vertexPool.at(prim->vertices[2])->coords.z } - c;
     
-    const Vec3f f0 = v1 - v0;
-    const Vec3f f1 = v2 - v1;
+    const Vec3f f0 = v1 - v0;    const Vec3f f1 = v2 - v1;
     const Vec3f f2 = v0 - v2;
 
     auto proj = [](const Vec3f& v, const Vec3f& a) { return dot(v, a); };

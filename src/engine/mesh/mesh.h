@@ -33,19 +33,11 @@ namespace engine::mesh
 		LOD3,
 	};
 
-	struct Vertex_
-	{
-		engine::math::Vec4f coords{};
-		engine::math::Vec4f color{ 0,1.0f,0,1.0f };
-		engine::math::Vec4f normal{};
-	};
-
-
 	struct alignas(16) Vertex
 	{
 
 		engine::math::Vec4f coords{};
-		engine::math::Vec4f color {0,1.0f,0,1.0f};
+		engine::math::Vec4f color {0.8f,0.8f,0.8f,1.0f};
 		engine::math::Vec4f normal{};
 		engineID_t id = 0;
 		uint32_t  _pad[3]; // pad to 64 bytes
